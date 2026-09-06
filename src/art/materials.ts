@@ -1,4 +1,4 @@
-import { KEY_LIGHT_DIR, PAL, nearestPal, neighborLight, neighborStroke, rgba } from "./palette";
+import { KEY_LIGHT_DIR, PAL, isPureBlack, nearestPal, neighborLight, neighborStroke, rgba, snapEnv } from "./palette";
 
 export interface Mat {
   fill: string;
@@ -37,6 +37,17 @@ export function matOf(id: string, tint?: string): Mat {
   };
 }
 
+/** World / prop fills — never blood_main/hot or torch. */
+export function matEnv(id: string, tint?: string): Mat {
+  const m = MAT[id] ?? MAT.cotton!;
+  const fill = snapEnv(tint ?? m.fill);
+  return {
+    fill,
+    stroke: neighborStroke(fill),
+    sheen: neighborLight(fill),
+  };
+}
+
 export function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -56,7 +67,8 @@ export function roundRect(
 }
 
 export function fillStroke(ctx: CanvasRenderingContext2D, m: Mat, lw = 1.4): void {
-  const stroke = neighborStroke(m.fill);
+  const raw = neighborStroke(m.fill);
+  const stroke = isPureBlack(raw) ? PAL.shadow_navy : raw;
   ctx.fillStyle = m.fill;
   ctx.fill();
   const sheen = m.sheen ?? neighborLight(m.fill);

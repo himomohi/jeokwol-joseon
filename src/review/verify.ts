@@ -5,7 +5,11 @@ import { BIOMES, HUBS, NPCS, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
 import {
+  KEY_LIGHT_DIR,
+  LOCKED_16,
+  PAL,
   PAL_INDEX,
+  PALETTE_LOCKED,
   isEnvHex,
   isPaletteHex,
   isPureBlack,
@@ -71,7 +75,7 @@ export function reviewContent(): ReviewReport {
 }
 
 function reviewPalette(notes: string[]): void {
-  const locked = [
+  const po = [
     "#0B0A14",
     "#162033",
     "#243552",
@@ -89,7 +93,13 @@ function reviewPalette(notes: string[]): void {
     "#2F5A48",
     "#6A7380",
   ];
-  if (PAL_INDEX.length !== 16 || PAL_INDEX.some((c, i) => c !== locked[i])) notes.push("잠금 16 hex 불일치");
+  if (!PALETTE_LOCKED) notes.push("팔레트 잠금 아님");
+  if (LOCKED_16.length !== 16 || LOCKED_16.some((c, i) => c !== po[i])) notes.push("잠금 16 hex 불일치");
+  if (PAL.blood_main !== LOCKED_16[9] || PAL.blood_hot !== LOCKED_16[10] || PAL.torch_warm !== LOCKED_16[12]) {
+    notes.push("PAL 별칭 이탈");
+  }
+  if (PAL_INDEX.some((c, i) => c !== LOCKED_16[i])) notes.push("PAL_INDEX 이탈");
+  if (KEY_LIGHT_DIR.x >= 0 || KEY_LIGHT_DIR.y >= 0) notes.push("키라이트 NW 아님");
   if (PAL_INDEX.some(isPureBlack)) notes.push("팔레트에 #000");
   if (PAL_INDEX.some((c) => isPureBlack(neighborStroke(c)))) notes.push("아웃라인 #000");
   if (Object.values(MAT).some((m) => isPureBlack(m.fill) || isPureBlack(m.stroke))) notes.push("재료 #000");

@@ -1,51 +1,76 @@
 /**
- * Joseon locked-16 working palette (PROPOSAL until user locks).
- * Env stays low-sat. Blood crimson and torch are for life / VFX / UI only.
- * Outlines use a neighbor swatch — never pure #000.
- * Key light comes from the northwest.
+ * FINAL Joseon locked-16. Product-owner lock — do not add swatches.
+ * Pillars: silhouette ID first; low-sat env; blood_main/hot + torch only for
+ * life / VFX / UI / light; no #000 outlines (neighbor swatches);
+ * Joseon hats / cheollik / armor; readable with post OFF.
+ * Key light: northwest (canvas −x, −y).
  */
+export const LOCKED_16 = [
+  "#0B0A14", // 00 bg_void
+  "#162033", // 01 shadow_navy
+  "#243552", // 02 env_mid
+  "#3D5278", // 03 env_cool
+  "#6E6256", // 04 earth_dark
+  "#B5A48C", // 05 earth_mid
+  "#EDE4D4", // 06 bone_light
+  "#3F0A12", // 07 blood_deep
+  "#8A1220", // 08 blood_mid
+  "#C41E3A", // 09 blood_main (char / VFX / UI only)
+  "#F24555", // 10 blood_hot (char / VFX / UI only)
+  "#8A6414", // 11 metal_dark
+  "#E0A81C", // 12 torch_warm (light / UI)
+  "#F0C86A", // 13 torch_hot (light / UI)
+  "#2F5A48", // 14 moss_cool
+  "#6A7380", // 15 ui_steel
+] as const;
+
+export type PalHex = (typeof LOCKED_16)[number];
+
+export const PAL_NAMES = [
+  "bg_void",
+  "shadow_navy",
+  "env_mid",
+  "env_cool",
+  "earth_dark",
+  "earth_mid",
+  "bone_light",
+  "blood_deep",
+  "blood_mid",
+  "blood_main",
+  "blood_hot",
+  "metal_dark",
+  "torch_warm",
+  "torch_hot",
+  "moss_cool",
+  "ui_steel",
+] as const;
+
+export type PalName = (typeof PAL_NAMES)[number];
+
 export const PAL = {
-  bg_void: "#0B0A14",
-  shadow_navy: "#162033",
-  env_mid: "#243552",
-  env_cool: "#3D5278",
-  earth_dark: "#6E6256",
-  earth_mid: "#B5A48C",
-  bone_light: "#EDE4D4",
-  blood_deep: "#3F0A12",
-  blood_mid: "#8A1220",
-  blood_main: "#C41E3A",
-  blood_hot: "#F24555",
-  metal_dark: "#8A6414",
-  torch_warm: "#E0A81C",
-  torch_hot: "#F0C86A",
-  moss_cool: "#2F5A48",
-  ui_steel: "#6A7380",
+  bg_void: LOCKED_16[0],
+  shadow_navy: LOCKED_16[1],
+  env_mid: LOCKED_16[2],
+  env_cool: LOCKED_16[3],
+  earth_dark: LOCKED_16[4],
+  earth_mid: LOCKED_16[5],
+  bone_light: LOCKED_16[6],
+  blood_deep: LOCKED_16[7],
+  blood_mid: LOCKED_16[8],
+  blood_main: LOCKED_16[9],
+  blood_hot: LOCKED_16[10],
+  metal_dark: LOCKED_16[11],
+  torch_warm: LOCKED_16[12],
+  torch_hot: LOCKED_16[13],
+  moss_cool: LOCKED_16[14],
+  ui_steel: LOCKED_16[15],
 } as const;
 
-export type PalName = keyof typeof PAL;
-export type PalHex = (typeof PAL)[PalName];
+export const PAL_INDEX: PalHex[] = [...LOCKED_16];
 
-export const PAL_INDEX: PalHex[] = [
-  PAL.bg_void,
-  PAL.shadow_navy,
-  PAL.env_mid,
-  PAL.env_cool,
-  PAL.earth_dark,
-  PAL.earth_mid,
-  PAL.bone_light,
-  PAL.blood_deep,
-  PAL.blood_mid,
-  PAL.blood_main,
-  PAL.blood_hot,
-  PAL.metal_dark,
-  PAL.torch_warm,
-  PAL.torch_hot,
-  PAL.moss_cool,
-  PAL.ui_steel,
-];
+export const PALETTE_LOCKED = true;
 
-/** Low-sat environment + metal/moss/steel. No blood_main/hot, no torch. */
+/** Low-sat env + metal / moss / steel. No blood (07–10), no torch (12–13). */
 export const ENV_INDEX = [0, 1, 2, 3, 4, 5, 6, 11, 14, 15];
 
 /** Character / life / VFX / UI crimson. */
@@ -55,7 +80,7 @@ export const LIFE_INDEX = [7, 8, 9, 10];
 export const TORCH_INDEX = [12, 13];
 
 /** Northwest in canvas space (x right, y down). */
-export const KEY_LIGHT_DIR = { x: -0.68, y: -0.52 };
+export const KEY_LIGHT_DIR = Object.freeze({ x: -0.68, y: -0.52 });
 
 export interface Rgb {
   r: number;
@@ -159,7 +184,7 @@ export function isEnvHex(hex: string): boolean {
   return ENV_INDEX.some((i) => hexKey(PAL_INDEX[i]!) === k);
 }
 
-/** CSS theme mapped from the working 16. Applied at boot so UI cannot drift. */
+/** CSS theme mapped from the locked 16. Applied at boot so UI cannot drift. */
 export const CSS_THEME: Record<string, string> = {
   "--ink": PAL.bg_void,
   "--paper": PAL.bone_light,

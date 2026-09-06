@@ -4,7 +4,7 @@ import { TILE } from "../core/coords";
 import { randAt } from "../world/noise";
 import type { ChunkData, PropInst } from "../world/map";
 import { PAL, rgba, snapEnv } from "./palette";
-import { ellipse, fillStroke, matOf, roundRect } from "./materials";
+import { ellipse, fillStroke, matEnv, roundRect } from "./materials";
 
 export function drawTile(ctx: CanvasRenderingContext2D, biome: BiomeId, x: number, y: number, seed: number): void {
   const b = BIOMES[biome];
@@ -50,7 +50,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(14, 4);
     ctx.lineTo(-14, 4);
     ctx.closePath();
-    fillStroke(ctx, matOf("jade", PAL.moss_cool));
+    fillStroke(ctx, matEnv("jade", PAL.moss_cool));
     ctx.fillStyle = PAL.earth_dark;
     ctx.fillRect(-2, 4, 4, 8);
   } else if (art === "bamboo") {
@@ -76,7 +76,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(10, -30);
     ctx.stroke();
   } else if (art === "rock") {
-    ellipse(ctx, 0, 0, 12, 8, matOf("iron", PAL.earth_dark));
+    ellipse(ctx, 0, 0, 12, 8, matEnv("iron", PAL.earth_dark));
   } else if (art === "reed") {
     ctx.strokeStyle = PAL.moss_cool;
     ctx.beginPath();
@@ -86,7 +86,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(6, -14);
     ctx.stroke();
   } else if (art === "bush") {
-    ellipse(ctx, 0, 0, 12, 8, matOf("jade", PAL.moss_cool));
+    ellipse(ctx, 0, 0, 12, 8, matEnv("jade", PAL.moss_cool));
   } else if (art === "lantern") {
     ctx.fillStyle = PAL.earth_dark;
     ctx.fillRect(-3, 4, 6, 8);
@@ -97,7 +97,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.fill();
     ctx.shadowBlur = 0;
   } else if (art === "campfire") {
-    ellipse(ctx, 0, 4, 10, 5, matOf("iron", PAL.earth_dark));
+    ellipse(ctx, 0, 4, 10, 5, matEnv("iron", PAL.earth_dark));
     ctx.fillStyle = PAL.torch_hot;
     ctx.beginPath();
     ctx.moveTo(-6, 2);
@@ -111,11 +111,11 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
   } else if (art === "house" || art === "shop" || art === "shrine" || art === "gate") {
     const w = p.def.w;
     const h = p.def.h;
-    ctx.fillStyle = PAL.earth_mid;
+    ctx.fillStyle = snapEnv(PAL.earth_mid);
     ctx.fillRect(-w * 0.42, -h * 0.15, w * 0.84, h * 0.45);
     ctx.strokeStyle = PAL.earth_dark;
     ctx.strokeRect(-w * 0.42, -h * 0.15, w * 0.84, h * 0.45);
-    ctx.fillStyle = PAL.earth_dark;
+    ctx.fillStyle = snapEnv(PAL.earth_dark);
     ctx.beginPath();
     ctx.moveTo(-w * 0.5, -h * 0.15);
     ctx.lineTo(0, -h * 0.65);
@@ -134,7 +134,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(0, -16);
     ctx.lineTo(20, 10);
     ctx.closePath();
-    fillStroke(ctx, matOf("cotton", PAL.earth_dark));
+    fillStroke(ctx, matEnv("cotton", PAL.earth_dark));
   }
   ctx.restore();
 }
@@ -142,7 +142,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
 export function drawRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, alpha: number): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = PAL.earth_dark;
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
   ctx.beginPath();
   ctx.moveTo(x, y + h * 0.55);
   ctx.lineTo(x + w * 0.5, y);
