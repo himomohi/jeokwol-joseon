@@ -21,6 +21,7 @@ const audio = new AudioBus();
 let lastEquip = "";
 let lastUi = "";
 let boot = true;
+let lastMode = sim.mode;
 
 mountUi(uiRoot);
 bootPrep();
@@ -108,6 +109,11 @@ function frame(tms: number): void {
       onEvents();
     },
     (alpha) => {
+      if (lastMode !== sim.mode && sim.mode === "play") {
+        renderer.cam.x = sim.player.x;
+        renderer.cam.y = sim.player.y;
+      }
+      lastMode = sim.mode;
       renderer.draw(sim, alpha);
       const sig =
         sim.mode === "title"
