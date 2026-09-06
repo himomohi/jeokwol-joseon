@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  base: "/jeokwol-joseon/",
   server: {
     host: true,
     port: 47261,
