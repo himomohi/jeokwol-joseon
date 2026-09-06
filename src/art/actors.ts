@@ -204,7 +204,7 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
 export function drawNpc(ctx: CanvasRenderingContext2D, actor: Actor): void {
   ctx.save();
   ctx.rotate(0.2);
-  ellipse(ctx, 0, 2, 8, 12, matOf("silk", actor.art === "npc_trainer" ? "#4a1a20" : actor.art === "npc_shop" ? "#5a4a20" : "#3a3a40"));
+  ellipse(ctx, 0, 2, 8, 12, matOf("silk", actor.art === "npc_trainer" ? "#8b1520" : actor.art === "npc_shop" ? "#c9a46a" : "#3a3a40"));
   ellipse(ctx, 0, -12, 6.5, 7, matOf("skin"));
   drawHat(ctx, actor.art === "npc_trainer" ? "gat" : "manggeon", matOf("horsehair"));
   ctx.restore();

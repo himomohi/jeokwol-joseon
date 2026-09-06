@@ -18,6 +18,7 @@ import { ITEMS, SHOP_LIST, STARTER_BOOTS, STARTER_CHEST, STARTER_WEAPON, itemByI
 import { LOOT_TABLES, NPCS, POI } from "../content/world";
 import { addStats } from "../content/jobs";
 import { TerrainCache, biomeAt, type ChunkData, type Solid } from "./map";
+import { pushOut } from "./collision";
 
 export interface Actor {
   id: string;
@@ -579,18 +580,9 @@ function solidsNear(sim: Sim, x: number, y: number): Solid[] {
 
 function resolveMove(sim: Sim, a: Actor, nx: number, ny: number): void {
   const solids = solidsNear(sim, nx, ny);
-  for (const s of solids) {
-    const dx = nx - s.x;
-    const dy = ny - s.y;
-    const d = Math.hypot(dx, dy);
-    const min = a.radius + s.r;
-    if (d < min && d > 0.001) {
-      if (s.door && ny > s.y) continue;
-      const k = (min - d) / d;
-      nx += dx * k;
-      ny += dy * k;
-    }
-  }
+  const p = pushOut(nx, ny, a.radius, solids);
+  nx = p.x;
+  ny = p.y;
   for (const o of sim.actors) {
     if (o === a || o.dead || o.kind === "npc") continue;
     const dx = nx - o.x;

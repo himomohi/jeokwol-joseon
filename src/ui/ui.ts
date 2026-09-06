@@ -108,7 +108,7 @@ function titleHtml(ui: UiState): string {
     <div class="row">${slots}</div>
     <div class="row"><button data-new>새 행적</button><button data-load>불러오기</button></div>
     <p style="font-size:12px">WASD 이동 · 마우스 조준 · 클릭/J 공격 · 1–8 초식 · E 대화 · F 줍기 · I 행낭 · K 초식 · M 지도 · Esc 멈춤 · P 후처리</p>
-    <p style="font-size:11px;color:#8a7060">직 ${r.jobs} · 전직 ${r.adv} · 전직당 최소 초식 ${r.skillsPerAdvMin} · 적 ${r.enemies} · 보스 ${r.bosses} · 물산 ${r.items}${r.ok ? "" : " · " + r.notes.join(", ")}</p>
+    <p style="font-size:11px;color:#8a7060">직 ${r.jobs} · 전직 ${r.adv} · 전직당 최소 초식 ${r.skillsPerAdvMin} · 초식 ${r.skills} · 적 ${r.enemies} · 보스 ${r.bosses} · 물산 ${r.items}${r.ok ? "" : " · " + r.notes.join(", ")}</p>
   </div></div>`;
 }
 
@@ -163,7 +163,7 @@ function hudHtml(sim: Sim, extra: { fps: number; fpsSim: number; post: boolean; 
   </div>
   ${extra.webglLost ? `<div class="narrow-warn">화면 후처리가 끊겼다. 캔버스로 그린다.</div>` : ""}
   <div class="skillbar">${slots}</div>
-  <div class="hint">${npc ? `[E] ${npc.name}에게 말을 건넨다` : "I 행낭  K 초식  M 지도  C 몸  Esc 멈춤"} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
+  <div class="hint">${npc ? `[E] ${npc.name}에게 말을 건넨다` : "마을 밖으로 나가 싸우고, 광장의 교관에게 전직한다. I 행낭 K 초식 M 지도 Esc 멈춤"} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 8 ? " · 전직 가능" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
   <div class="messages">${sim.messages.slice(-5).map((m) => `<div>${escapeHtml(m.text)}</div>`).join("")}</div>`;
 }
 
