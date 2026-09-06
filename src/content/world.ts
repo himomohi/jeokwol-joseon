@@ -135,7 +135,7 @@ export const PROPS: Record<string, PropDefinition> = {
   rock: { id: "rock", name: "바위", biomes: ["mountain", "snow", "riverside"], w: 22, h: 18, radius: 12, solid: true, roof: false, layer: "prop", art: "rock" },
   reed: { id: "reed", name: "갈대", biomes: ["riverside", "swamp"], w: 16, h: 28, radius: 4, solid: false, roof: false, layer: "prop", art: "reed" },
   bush: { id: "bush", name: "덤불", biomes: ["hanyang", "bamboo", "mountain"], w: 20, h: 16, radius: 8, solid: false, roof: false, layer: "prop", art: "bush" },
-  lantern: { id: "lantern", name: "석등", biomes: ["village", "haunted"], w: 14, h: 26, radius: 7, solid: true, roof: false, layer: "prop", art: "lantern" },
+  lantern: { id: "lantern", name: "석등", biomes: ["village", "haunted"], w: 14, h: 26, radius: 6, solid: true, roof: false, layer: "prop", art: "lantern" },
   campfire: { id: "campfire", name: "모닥불", biomes: ["mountain", "road"], w: 18, h: 16, radius: 8, solid: false, roof: false, layer: "prop", art: "campfire" },
   grave: { id: "grave", name: "무덤", biomes: ["haunted"], w: 16, h: 22, radius: 8, solid: true, roof: false, layer: "prop", art: "grave" },
   house: { id: "house", name: "초가", biomes: ["village"], w: 86, h: 70, radius: 40, solid: true, roof: true, layer: "prop", art: "house" },

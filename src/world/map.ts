@@ -40,6 +40,7 @@ export interface ChunkData {
   solids: Solid[];
   roofs: RoofRect[];
   lastUse: number;
+  spawned: boolean;
 }
 
 const poiList = Object.values(POI);
@@ -132,9 +133,9 @@ function villageLayout(seed: number): PropInst[] {
     { def: PROPS.shrine!, x: 40, y: -130 },
     { def: PROPS.house!, x: -200, y: 80 },
     { def: PROPS.house!, x: 210, y: 90 },
-    { def: PROPS.lantern!, x: -60, y: 40 },
-    { def: PROPS.lantern!, x: 70, y: 40 },
-    { def: PROPS.lantern!, x: 0, y: -70 },
+    { def: PROPS.lantern!, x: -70, y: 90 },
+    { def: PROPS.lantern!, x: 80, y: 90 },
+    { def: PROPS.lantern!, x: 20, y: -70 },
   ];
   for (const p of placed) {
     items.push({ id: `v_${p.def.id}_${p.x}_${p.y}`, def: p.def, x: p.x, y: p.y, variant: randAt(p.x | 0, p.y | 0, seed, 9), roof: p.def.roof });
@@ -198,7 +199,7 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
     }
   }
 
-  return { cx, cy, tiles, props, solids, roofs, lastUse: 0 };
+  return { cx, cy, tiles, props, solids, roofs, lastUse: 0, spawned: false };
 }
 
 export class TerrainCache {

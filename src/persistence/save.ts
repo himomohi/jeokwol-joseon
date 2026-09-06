@@ -2,12 +2,23 @@ import type { SaveBlob } from "../world/sim";
 
 const PREFIX = "jeokwol.slot.";
 
+function storage(): Storage | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    return localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function saveSlot(slot: number, blob: SaveBlob): { ok: boolean; reason?: string } {
+  const ls = storage();
+  if (!ls) return { ok: false, reason: "이 환경에서는 저장할 수 없다" };
   try {
     const json = JSON.stringify(blob);
     if (json.length > 4_500_000) return { ok: false, reason: "기록이 너무 크다" };
-    localStorage.setItem(PREFIX + slot, json);
-    localStorage.setItem("jeokwol.last", String(slot));
+    ls.setItem(PREFIX + slot, json);
+    ls.setItem("jeokwol.last", String(slot));
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "저장 실패";
@@ -16,8 +27,10 @@ export function saveSlot(slot: number, blob: SaveBlob): { ok: boolean; reason?: 
 }
 
 export function loadSlot(slot: number): { ok: true; blob: SaveBlob } | { ok: false; reason: string } {
+  const ls = storage();
+  if (!ls) return { ok: false, reason: "이 환경에서는 저장할 수 없다" };
   try {
-    const raw = localStorage.getItem(PREFIX + slot);
+    const raw = ls.getItem(PREFIX + slot);
     if (!raw) return { ok: false, reason: "빈 자리" };
     const blob = JSON.parse(raw) as SaveBlob;
     if (blob.v !== 1 || typeof blob.seed !== "number") return { ok: false, reason: "낡은 기록" };
@@ -35,6 +48,8 @@ export function slotInfo(slot: number): string {
 }
 
 export function lastSlot(): number {
-  const v = Number(localStorage.getItem("jeokwol.last") ?? "0");
+  const ls = storage();
+  if (!ls) return 0;
+  const v = Number(ls.getItem("jeokwol.last") ?? "0");
   return Number.isFinite(v) ? v : 0;
 }

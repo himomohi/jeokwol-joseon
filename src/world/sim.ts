@@ -579,8 +579,20 @@ function solidsNear(sim: Sim, x: number, y: number): Solid[] {
 }
 
 function resolveMove(sim: Sim, a: Actor, nx: number, ny: number): void {
-  const solids = solidsNear(sim, nx, ny);
-  const p = pushOut(nx, ny, a.radius, solids);
+  const ox = a.x;
+  const oy = a.y;
+  const tryPos = (x: number, y: number): { x: number; y: number } => {
+    const solids = solidsNear(sim, x, y);
+    return pushOut(x, y, a.radius, solids);
+  };
+  let p = tryPos(nx, ny);
+  if (Math.hypot(p.x - nx, p.y - ny) > 0.2) {
+    const px = tryPos(nx, oy);
+    const py = tryPos(ox, ny);
+    const dx = Math.hypot(px.x - ox, px.y - oy);
+    const dy = Math.hypot(py.x - ox, py.y - oy);
+    p = dx >= dy ? px : py;
+  }
   nx = p.x;
   ny = p.y;
   for (const o of sim.actors) {
@@ -1233,10 +1245,20 @@ export function step(sim: Sim, dt: number): void {
   }
 
   const chunks = sim.terrain.around(sim.player.x, sim.player.y, sim.time, 2);
-  for (const c of chunks) spawnEnemies(sim, c);
+  for (const c of chunks) {
+    if (!c.spawned) {
+      spawnEnemies(sim, c);
+      c.spawned = true;
+    }
+  }
 
   for (const a of sim.actors) {
     if (a.kind === "enemy" && !a.dead) {
+      if (dist(a.x, a.y, sim.player.x, sim.player.y) > 520) {
+        a.vx = 0;
+        a.vy = 0;
+        continue;
+      }
       tickAi(sim, a, dt);
       resolveMove(sim, a, a.x + a.vx * dt, a.y + a.vy * dt);
     }

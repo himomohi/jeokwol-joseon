@@ -7,10 +7,12 @@
     "dev": "vite --host --port 47261",
     "build": "tsc && vite build",
     "preview": "vite preview --host --port 47261",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "vite-node scripts/sim-smoke.ts"
   },
   "devDependencies": {
     "typescript": "~5.9.2",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vite-node": "^6.0.0"
   }
 }
