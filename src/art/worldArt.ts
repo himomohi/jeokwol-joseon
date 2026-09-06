@@ -60,6 +60,15 @@ export function drawTile(ctx: CanvasRenderingContext2D, biome: BiomeId, x: numbe
   }
 
   if (biome === "village" || biome === "hanyang") {
+    ctx.strokeStyle = snapEnv(PAL.earth_dark);
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 1;
+    const row = 10 + ((Math.floor(y / TILE) * 3) % 8);
+    ctx.beginPath();
+    ctx.moveTo(x, y + row);
+    ctx.lineTo(x + TILE, y + row + 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
     if (t > 0.88) {
       ctx.fillStyle = snapEnv(PAL.earth_mid);
       ctx.fillRect(x + 20, y + 22, 6, 3);
@@ -82,8 +91,10 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
   ctx.save();
   ctx.translate(p.x, p.y);
   const art = p.def.art;
-  const sheet = cachedStatic(`prop:${art}:${(p.variant * 8) | 0}`, 96, 96, (c) => drawPropArt(c, art, p.def.w, p.def.h));
-  ctx.drawImage(sheet, -48, -48, 96, 96);
+  const big = art === "house" || art === "shop" || art === "shrine" || art === "gate" || art === "pine";
+  const sz = big ? 140 : 112;
+  const sheet = cachedStatic(`prop:${art}:${(p.variant * 8) | 0}:${sz}`, sz, sz, (c) => drawPropArt(c, art, p.def.w, p.def.h));
+  ctx.drawImage(sheet, -sz / 2, -sz / 2, sz, sz);
   ctx.restore();
 }
 
@@ -103,11 +114,22 @@ function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: n
 }
 
 function drawPine(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-2.5, 2, 5, 14);
-  poly(ctx, [[0, -34], [16, 6], [-16, 6]], matEnv("jade", PAL.moss_cool), 1.3);
-  poly(ctx, [[0, -28], [12, 0], [-12, 0]], matEnv("jade", PAL.env_mid), 1.1);
-  poly(ctx, [[0, -36], [8, -10], [-8, -10]], matEnv("jade", PAL.moss_cool), 1);
+  const wood = matEnv("wood", PAL.earth_dark);
+  poly(ctx, [[-4.5, 16], [-3, -10], [3.2, -10], [5, 16]], wood, 1.3);
+  ctx.strokeStyle = snapEnv(PAL.earth_mid);
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(0, -4);
+  ctx.lineTo(-12, -16);
+  ctx.moveTo(1, -2);
+  ctx.lineTo(13, -14);
+  ctx.stroke();
+  ellipse(ctx, -10, -18, 12, 8, matEnv("jade", PAL.env_mid));
+  ellipse(ctx, 11, -16, 11, 7, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 0, -14, 14, 9, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, -6, -26, 10, 7, matEnv("jade", PAL.env_mid));
+  ellipse(ctx, 6, -28, 10, 7, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 1, -34, 8, 6, matEnv("jade", PAL.moss_cool));
 }
 
 function drawBamboo(ctx: CanvasRenderingContext2D): void {

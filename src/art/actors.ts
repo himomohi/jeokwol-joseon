@@ -71,7 +71,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
   const pngKey = pngKeyForJob(vis.jobId);
   const sheet = pngKey ? pngOverlay(pngKey) : null;
   if (sheet) {
-    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, 56);
+    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, 64);
     ctx.restore();
     return;
   }

@@ -43,7 +43,7 @@ export class Renderer {
     this.cam.w = w;
     this.cam.h = h;
     this.narrow = cssW < 720;
-    this.cam.zoom = this.narrow ? 0.95 : 1.15;
+    this.cam.zoom = this.narrow ? 1.15 : 1.48;
   }
 
   follow(x: number, y: number, dt: number): void {
@@ -99,7 +99,8 @@ export class Renderer {
       draw: () => {
         ctx.save();
         ctx.translate(p.x, p.y);
-        drawShadow(ctx, 14);
+        drawShadow(ctx, 16);
+        ctx.scale(1.22, 1.22);
         drawPlayer(ctx, sim.player, vis, moving);
         ctx.restore();
       },
@@ -115,6 +116,7 @@ export class Renderer {
           ctx.save();
           ctx.translate(ip.x, ip.y);
           drawShadow(ctx, a.radius);
+          ctx.scale(1.18, 1.18);
           if (a.kind === "npc") drawNpc(ctx, a);
           else drawEnemy(ctx, a);
           ctx.restore();
