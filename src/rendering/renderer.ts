@@ -210,13 +210,15 @@ export class Renderer {
     drawLighting(ctx, w, h, this.cam.x, this.cam.y, this.cam.zoom, lights, moon);
 
     const dctx = this.dctx;
-    if (sim.postOn && !this.post.lost && this.post.apply(this.world)) {
-      if (dctx) {
-        dctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (!dctx) return;
+    dctx.setTransform(1, 0, 0, 1, 0, 0);
+    try {
+      if (sim.postOn && !this.post.lost && this.post.apply(this.world)) {
         dctx.drawImage(this.post.canvas, 0, 0, w, h);
+      } else {
+        dctx.drawImage(this.world, 0, 0);
       }
-    } else if (dctx) {
-      dctx.setTransform(1, 0, 0, 1, 0, 0);
+    } catch {
       dctx.drawImage(this.world, 0, 0);
     }
   }

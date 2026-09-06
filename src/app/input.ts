@@ -1,15 +1,15 @@
-import { screenToWorld, type Camera } from "../core/coords";
-
 export interface Input {
   ax: number;
   ay: number;
   mx: number;
   my: number;
   attack: boolean;
+  attackHeld: boolean;
   pickup: boolean;
   talk: boolean;
   rest: boolean;
   skills: boolean[];
+  skillHeld: boolean[];
   toggle: { inv: boolean; skills: boolean; map: boolean; char: boolean; pause: boolean; post: boolean; help: boolean };
 }
 
@@ -20,17 +20,21 @@ export function createInput(): Input {
     mx: 0,
     my: 0,
     attack: false,
+    attackHeld: false,
     pickup: false,
     talk: false,
     rest: false,
     skills: [false, false, false, false, false, false, false, false],
+    skillHeld: [false, false, false, false, false, false, false, false],
     toggle: { inv: false, skills: false, map: false, char: false, pause: false, post: false, help: false },
   };
 }
 
-export function bindInput(target: HTMLElement, input: Input, cam: () => Camera): void {
+export function bindInput(target: HTMLElement, input: Input): void {
   const down = new Set<string>();
-  const syncMove = (): void => {
+  let mouseHeld = false;
+
+  const sync = (): void => {
     let x = 0;
     let y = 0;
     if (down.has("KeyW") || down.has("ArrowUp")) y -= 1;
@@ -39,14 +43,16 @@ export function bindInput(target: HTMLElement, input: Input, cam: () => Camera):
     if (down.has("KeyD") || down.has("ArrowRight")) x += 1;
     input.ax = x;
     input.ay = y;
+    input.attackHeld = mouseHeld || down.has("KeyJ");
+    for (let i = 0; i < 8; i++) input.skillHeld[i] = down.has(`Digit${i + 1}`) || down.has(`Numpad${i + 1}`);
   };
 
   window.addEventListener("keydown", (e) => {
-    if (e.repeat && ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "KeyJ", "KeyE", "KeyF"].includes(e.code)) return;
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
     if (e.target instanceof HTMLInputElement) return;
     down.add(e.code);
-    syncMove();
+    sync();
+    if (e.repeat) return;
     const n = Number(e.key);
     if (n >= 1 && n <= 8) input.skills[n - 1] = true;
     if (e.code === "KeyJ") input.attack = true;
@@ -63,11 +69,13 @@ export function bindInput(target: HTMLElement, input: Input, cam: () => Camera):
   });
   window.addEventListener("keyup", (e) => {
     down.delete(e.code);
-    syncMove();
+    sync();
   });
   window.addEventListener("blur", () => {
     down.clear();
-    syncMove();
+    mouseHeld = false;
+    input.skillHeld.fill(false);
+    sync();
   });
   target.addEventListener("pointermove", (e) => {
     const r = target.getBoundingClientRect();
@@ -75,11 +83,17 @@ export function bindInput(target: HTMLElement, input: Input, cam: () => Camera):
     input.my = (e.clientY - r.top) * (target instanceof HTMLCanvasElement ? target.height / r.height : 1);
   });
   target.addEventListener("pointerdown", (e) => {
-    if (e.button === 0) input.attack = true;
+    if (e.button === 0) {
+      input.attack = true;
+      mouseHeld = true;
+      sync();
+    }
+  });
+  window.addEventListener("pointerup", () => {
+    mouseHeld = false;
+    sync();
   });
   target.addEventListener("contextmenu", (e) => e.preventDefault());
-
-  void cam;
 }
 
 export function consumeEdges(input: Input): void {
@@ -96,5 +110,3 @@ export function consumeEdges(input: Input): void {
   input.toggle.post = false;
   input.toggle.help = false;
 }
-
-export { screenToWorld };

@@ -16,7 +16,7 @@ export function drawLighting(
   lights: Light[],
   moon: number,
 ): void {
-  const night = 0.22 + moon * 0.18;
+  const night = 0.1 + moon * 0.08;
   ctx.save();
   ctx.globalCompositeOperation = "multiply";
   ctx.fillStyle = `rgba(${30 + moon * 40}, ${12 + moon * 8}, ${18}, ${night})`;

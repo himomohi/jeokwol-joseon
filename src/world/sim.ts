@@ -510,7 +510,7 @@ function spawnEnemies(sim: Sim, chunk: ChunkData): void {
     return;
   }
 
-  const extra = (cx === 0 && cy === 1) || (cx === 1 && cy === 0) || (cx === -1 && cy === 0) ? 4 : 0;
+  const extra = (cx === 0 && (cy === 1 || cy === -1)) || (cy === 0 && (cx === 1 || cx === -1)) ? 4 : 0;
   for (let i = 0; i < 7 + extra; i++) {
     const sk = `s:${cx}:${cy}:${i}`;
     if (p.killed[sk] && sim.time - p.killed[sk] < 90) continue;
@@ -854,14 +854,8 @@ function trySkill(sim: Sim, slot: number): void {
   if (!skill) return;
   const st = statsNow(sim);
   const cdLeft = (sim.skillCd[id] ?? 0) - sim.time;
-  if (cdLeft > 0) {
-    emit(sim, { type: "message", text: "아직 숨을 고르는 중", kind: "warn" });
-    return;
-  }
-  if (sim.player.mp < skill.mp) {
-    emit(sim, { type: "message", text: "마력이 부족하다", kind: "warn" });
-    return;
-  }
+  if (cdLeft > 0) return;
+  if (sim.player.mp < skill.mp) return;
   sim.player.mp -= skill.mp;
   const haste = st.haste || 1;
   sim.skillCd[id] = sim.time + skill.cd / haste;

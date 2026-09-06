@@ -24,7 +24,7 @@ let boot = true;
 
 mountUi(uiRoot);
 bootPrep();
-bindInput(canvas, input, () => renderer.cam);
+bindInput(canvas, input);
 
 function resize(): void {
   renderer.resize(window.innerWidth, window.innerHeight, Math.min(2, window.devicePixelRatio || 1));
@@ -44,7 +44,7 @@ function pumpInput(): void {
   handleCommand(sim, { type: "move", ax: input.ax, ay: input.ay });
   const w = screenToWorld(renderer.cam, input.mx, input.my);
   handleCommand(sim, { type: "aim", x: w.x, y: w.y });
-  if (input.attack) handleCommand(sim, { type: "attack" });
+  if (input.attack || input.attackHeld) handleCommand(sim, { type: "attack" });
   if (input.pickup) handleCommand(sim, { type: "pickupNearest" });
   if (input.talk) {
     const n = nearestNpc(sim);
@@ -54,7 +54,7 @@ function pumpInput(): void {
     handleCommand(sim, { type: "rest" });
     doSave(sim);
   }
-  for (let i = 0; i < 8; i++) if (input.skills[i]) handleCommand(sim, { type: "useSkill", slot: i });
+  for (let i = 0; i < 8; i++) if (input.skills[i] || input.skillHeld[i]) handleCommand(sim, { type: "useSkill", slot: i });
   if (input.toggle.inv) ui.panel = ui.panel === "inv" ? "none" : "inv";
   if (input.toggle.skills) ui.panel = ui.panel === "skills" ? "none" : "skills";
   if (input.toggle.map) ui.panel = ui.panel === "map" ? "none" : "map";

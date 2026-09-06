@@ -59,6 +59,9 @@ export function renderUi(root: HTMLElement, sim: Sim, ui: UiState, extra: { fps:
     d.querySelectorAll("[data-buy]").forEach((b) =>
       b.addEventListener("click", () => handleCommand(sim, { type: "buy", itemId: (b as HTMLElement).dataset.buy! })),
     );
+    d.querySelectorAll("[data-sell]").forEach((b) =>
+      b.addEventListener("click", () => handleCommand(sim, { type: "sell", instId: (b as HTMLElement).dataset.sell! })),
+    );
   }
 
   if (ui.panel !== "none") {
