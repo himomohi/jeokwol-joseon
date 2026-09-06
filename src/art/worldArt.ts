@@ -12,7 +12,11 @@ import { PAL, rgba, snapEnv } from "./palette";
 export const GROUND_PAD = 4;
 export const GROUND_CELL = 12;
 
-export type PropLayer = "trunk" | "canopy" | "body";
+export type PropLayer = "trunk" | "canopy" | "body" | "roof";
+
+export function isHanokArt(art: string): boolean {
+  return art === "house" || art === "shop" || art === "shrine" || art === "gate";
+}
 
 function artT(x: number, y: number, seed: number, salt: number): number {
   return randAt(Math.floor(x), Math.floor(y), seed ^ STREAM_SALT.art, salt);
@@ -194,6 +198,16 @@ export function canopyFade(p: PropInst, px: number, py: number): number {
   return 1 - cx * cy * 0.82;
 }
 
+/** Fade only the giwa when the player is under that hanok. Walls stay opaque. */
+export function roofFade(p: PropInst, px: number, py: number): number {
+  if (!p.def.roof && !isHanokArt(p.def.art)) return 1;
+  const inside =
+    Math.abs(px - p.x) < p.def.w * 0.32 &&
+    py < p.y + 4 &&
+    py > p.y - p.def.h * 0.42;
+  return inside ? 0.22 : 1;
+}
+
 export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst, layer: PropLayer = "body", canopyAlpha = 1): void {
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -201,8 +215,8 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst, layer: Prop
   const sz = propSheetSize(art);
   const v = ((p.variant * 8) | 0);
   const sheet = cachedStatic(`prop:${art}:${v}:${sz}:${layer}`, sz, sz, (c) => drawPropArt(c, art, p.def.w, p.def.h, p.variant, layer));
-  const foot = isTreeArt(art) || art === "tent" || art === "house" || art === "shop" || art === "shrine" || art === "gate";
-  if (layer === "canopy") ctx.globalAlpha *= canopyAlpha;
+  const foot = isTreeArt(art) || art === "tent" || isHanokArt(art);
+  if (layer === "canopy" || layer === "roof") ctx.globalAlpha *= canopyAlpha;
   ctx.drawImage(sheet, -sz / 2, foot ? -sz * 0.72 : -sz * 0.55, sz, sz);
   ctx.restore();
 }
@@ -225,7 +239,17 @@ function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: n
   else if (art === "lantern") drawStoneLantern(ctx);
   else if (art === "campfire") drawCampfire(ctx);
   else if (art === "grave") drawGrave(ctx);
-  else if (art === "house" || art === "shop" || art === "shrine" || art === "gate") drawHanok(ctx, art, w, h);
+  else if (isHanokArt(art)) {
+    if (layer === "roof") {
+      paintHanokGiwa(ctx, w, h);
+      return;
+    }
+    if (layer === "trunk") {
+      paintHanokWalls(ctx, art, w, h);
+      return;
+    }
+    drawHanok(ctx, art, w, h);
+  }
   else if (art === "tent") drawTent(ctx);
   else if (art === "wall") drawStoneWall(ctx);
 }
@@ -422,39 +446,58 @@ function drawGrave(ctx: CanvasRenderingContext2D): void {
   ctx.fillRect(-3, -6, 6, 2);
 }
 
-/** Wood walls + door. Roof is the separate opaque giwa pass. */
-export function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
-  const bw = Math.max(38, Math.min(56, w * 0.48));
-  const bh = Math.max(26, Math.min(36, h * 0.42));
+function hanokBody(w: number, h: number): { bw: number; bh: number } {
+  return {
+    bw: Math.max(44, Math.min(64, w * 0.52)),
+    bh: Math.max(36, Math.min(50, h * 0.5)),
+  };
+}
+
+/** Local giwa rect in the same space as the walls — overlaps the eave, no air gap. */
+export function hanokRoofLocal(w: number, h: number): { x: number; y: number; w: number; h: number } {
+  const { bw, bh } = hanokBody(w, h);
+  const rw = bw * 2 + 22;
+  const rh = Math.max(44, bh * 1.45);
+  return { x: -rw * 0.5, y: -rh - 6, w: rw, h: rh };
+}
+
+function paintHanokGiwa(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const r = hanokRoofLocal(w, h);
+  drawHanokRoof(ctx, r.x, r.y, r.w, r.h);
+}
+
+function paintHanokWalls(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
+  const { bw, bh } = hanokBody(w, h);
   const wood = matEnv("wood", PAL.earth_mid);
   const post = matEnv("wood", PAL.earth_dark);
+  const top = -18;
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
   ctx.fillRect(-bw - 4, bh - 4, bw * 2 + 8, 8);
 
   ctx.fillStyle = wood.fill;
-  ctx.fillRect(-bw, -6, bw * 2, bh);
+  ctx.fillRect(-bw, top, bw * 2, bh - top);
   ctx.strokeStyle = post.stroke;
-  ctx.lineWidth = 1.6;
-  ctx.strokeRect(-bw, -6, bw * 2, bh);
+  ctx.lineWidth = 1.8;
+  ctx.strokeRect(-bw, top, bw * 2, bh - top);
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-bw, -6, 5, bh);
-  ctx.fillRect(bw - 5, -6, 5, bh);
-  ctx.fillRect(-6, -6, 5, bh);
+  ctx.fillRect(-bw, top, 6, bh - top);
+  ctx.fillRect(bw - 6, top, 6, bh - top);
+  ctx.fillRect(-6, top, 5, bh - top);
   for (let i = -bw + 12; i < bw - 8; i += 11) {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
     ctx.globalAlpha = 0.35;
-    ctx.fillRect(i, -4, 1.6, bh - 4);
+    ctx.fillRect(i, top + 2, 1.6, bh - top - 4);
     ctx.globalAlpha = 1;
   }
 
   ctx.fillStyle = snapEnv(PAL.bone_light);
-  ctx.fillRect(-10, 4, 20, bh - 10);
+  ctx.fillRect(-11, 6, 22, bh - 12);
   ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.strokeRect(-10, 4, 20, bh - 10);
+  ctx.strokeRect(-11, 6, 22, bh - 12);
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-1, 8, 2, bh - 16);
+  ctx.fillRect(-1, 10, 2, bh - 18);
 
   if (art === "shop") {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
@@ -475,7 +518,13 @@ export function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number,
   }
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-bw - 6, -10, bw * 2 + 12, 6);
+  ctx.fillRect(-bw - 8, top - 6, bw * 2 + 16, 10);
+}
+
+/** Opaque walls + opaque giwa as one solid building. Indoor fade uses the roof layer only. */
+export function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
+  paintHanokWalls(ctx, art, w, h);
+  paintHanokGiwa(ctx, w, h);
 }
 
 /** Solid dark-earth giwa. No stroked umbrella ribs, no ghost alpha stripes. */
@@ -585,6 +634,7 @@ function drawStoneWall(ctx: CanvasRenderingContext2D): void {
   ctx.strokeRect(8, -4, 10, 8);
 }
 
+/** QA helper. Play path never uses this as the only roof — giwa lives on the hanok. */
 export function drawRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, alpha: number): void {
   if (alpha < 0.08) return;
   ctx.save();

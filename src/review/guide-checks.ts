@@ -132,4 +132,26 @@ function sliceFn(src: string, start: string, next: string): string | null {
   return src.slice(a, b);
 }
 
+/**
+ * Source-law: drawHanok paints walls+giwa together. The post-drawable floating
+ * roof pass must not be the only giwa (ghost trapezoids).
+ */
+export function assertSolidHanok(worldArtSrc: string, rendererSrc: string): string[] {
+  const notes: string[] = [];
+  const hanok = sliceFn(worldArtSrc, "export function drawHanok", "export function drawHanokRoof");
+  if (!hanok) notes.push("drawHanok를 자를 수 없음");
+  else if (!hanok.includes("paintHanokGiwa") && !hanok.includes("drawHanokRoof")) {
+    notes.push("drawHanok가 기와(drawHanokRoof)를 안 그림");
+  }
+
+  const after = rendererSrc.slice(rendererSrc.indexOf("for (const d of drawables)"));
+  if (after.includes("drawRoof(") && /for\s*\(\s*const r of c\.roofs/.test(after)) {
+    notes.push("떠 있는 지붕 패스가 유일한 기와임");
+  }
+  if (!rendererSrc.includes(`drawProp(ctx, pr, "roof"`) && !rendererSrc.includes("drawProp(ctx, pr, 'roof'")) {
+    if (!worldArtSrc.includes("paintHanokGiwa")) notes.push("한옥 기와 레이어가 없음");
+  }
+  return notes;
+}
+
 export { finite };

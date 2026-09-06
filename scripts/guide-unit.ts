@@ -9,7 +9,7 @@ import { biomeWeights, groundTint, propForBiome } from "../src/world/map";
 import { createEmptySim, handleCommand, step } from "../src/world/sim";
 import { POI } from "../src/content/world";
 import { fieldMix, tentSiteAllowed } from "../src/world/placement";
-import { assertCodegenBodyAlwaysOn } from "../src/review/guide-checks";
+import { assertCodegenBodyAlwaysOn, assertSolidHanok } from "../src/review/guide-checks";
 
 const r = reviewContent();
 if (!r.ok) throw new Error(r.notes.join(", "));
@@ -107,6 +107,20 @@ function drawHorse() {}
 `);
 if (!rejected.some((n) => n.includes("대체") || n.includes("먼저") || n.includes("건너"))) {
   throw new Error("png-law assert missed the rejected if(sheet) skip");
+}
+
+const root = dirname(fileURLToPath(import.meta.url));
+const hanokLaw = assertSolidHanok(
+  readFileSync(join(root, "../src/art/worldArt.ts"), "utf8"),
+  readFileSync(join(root, "../src/rendering/renderer.ts"), "utf8"),
+);
+if (hanokLaw.length) throw new Error(hanokLaw.join(", "));
+const ghostRoofs = assertSolidHanok(
+  `export function drawHanok() { paintHanokWalls(); }\nexport function drawHanokRoof() {}`,
+  `for (const d of drawables) d.draw();\nfor (const c of chunks) { for (const r of c.roofs) drawRoof(ctx, r.x, r.y, r.w, r.h, r.alpha); }`,
+);
+if (!ghostRoofs.some((n) => n.includes("기와") || n.includes("떠 있는"))) {
+  throw new Error("hanok-law assert missed walls-only + floating roof");
 }
 
 console.log("GUIDE-UNIT OK", { span: span.toFixed(2), attacks: [id1, id2], trailIds: [...ids], pngHint: PNG_HINT_ALPHA });

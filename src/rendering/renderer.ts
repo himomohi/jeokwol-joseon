@@ -4,7 +4,7 @@ import { clamp, lerp } from "../core/math";
 import type { Sim } from "../world/sim";
 import { interpActor } from "../world/sim";
 import { drawEnemy, drawNpc, drawPlayer, drawShadow, visFrom } from "../art/actors";
-import { canopyFade, drawChunkGround, drawProp, drawRoof, isTreeArt } from "../art/worldArt";
+import { canopyFade, drawChunkGround, drawProp, isHanokArt, isTreeArt, roofFade } from "../art/worldArt";
 import { groundDropCanvas } from "../art/cache";
 import { ParticlePool } from "./particles";
 import { drawLighting, type Light } from "./lighting";
@@ -88,8 +88,10 @@ export class Renderer {
           const fade = canopyFade(pr, p.x, p.y);
           drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "trunk", 1) });
           drawables.push({ groundY, z: 1.05, draw: () => drawProp(ctx, pr, "canopy", fade) });
-        } else if (pr.def.roof) {
-          drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "body", 1) });
+        } else if (isHanokArt(pr.def.art) || pr.def.roof) {
+          const fade = roofFade(pr, p.x, p.y);
+          drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "trunk", 1) });
+          drawables.push({ groundY, z: 1.08, draw: () => drawProp(ctx, pr, "roof", fade) });
         } else {
           drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "body", 1) });
         }
@@ -217,15 +219,6 @@ export class Renderer {
     ctx.restore();
 
     this.particles.draw(ctx);
-
-    for (const c of chunks) {
-      for (const r of c.roofs) {
-        const inside = p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
-        r.alpha = lerp(r.alpha, inside ? 0.16 : 1, 0.14);
-        if (r.alpha < 0.05) continue;
-        drawRoof(ctx, r.x, r.y, r.w, r.h, r.alpha);
-      }
-    }
 
     ctx.restore();
 
