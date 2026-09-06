@@ -240,7 +240,6 @@ function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: n
   else if (art === "campfire") drawCampfire(ctx);
   else if (art === "grave") drawGrave(ctx);
   else if (isHanokArt(art)) {
-    if (layer === "canopy") return;
     if (layer === "roof") {
       paintHanokGiwa(ctx, w, h);
       return;
