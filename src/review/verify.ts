@@ -80,6 +80,13 @@ export function reviewContent(): ReviewReport {
   const missingSkills = Object.values(JOBS).flatMap((j) => j.skills).filter((id) => !SKILLS[id]);
   if (missingSkills.length) notes.push(`없는 초식 ${missingSkills.length}`);
   if (ART_PIPELINE !== "codegen") notes.push("아트 파이프라인이 codegen이 아님");
+  const alley = ENEMY_BY_ID.alley_ghost;
+  const wonhon = ENEMY_BY_ID.wonhon;
+  if (!alley || (alley.art === wonhon?.art && alley.hp === wonhon?.hp)) notes.push("골목원혼이 원혼 별칭만");
+  const herb = ENEMY_BY_ID.herb_golem;
+  if (!herb || (herb.art === "statue" && herb.hp === ENEMY_BY_ID.stone_guard?.hp)) notes.push("약초골렘 아트/스탯 재사용");
+  const arts = new Set(ENEMIES.map((e) => e.art));
+  if (arts.size < 40) notes.push(`적 아트 키 ${arts.size} < 40`);
   reviewPalette(notes);
   return {
     jobs: jobs.length,

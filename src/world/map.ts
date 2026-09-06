@@ -222,7 +222,7 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
     const y = oy + v * CHUNK;
     const b = biomeAt(seed, x, y);
     if (hubAt(x, y)) continue;
-    const cands = extraRocks && i >= 18 ? [PROPS.rock!] : propForBiome(b);
+    const cands = extraRocks && i >= 18 ? [PROPS.wall ?? PROPS.rock!] : propForBiome(b);
     if (!cands.length) continue;
     if (randAt(cx, cy, seed, 300 + i) > (b === "village" ? 0.3 : extraRocks && i >= 18 ? 0.35 : 0.62)) continue;
     const def = cands[Math.floor(randAt(cx, cy, seed, 400 + i) * cands.length)]!;

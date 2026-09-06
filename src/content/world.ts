@@ -27,7 +27,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     ambient: PAL.earth_mid,
     fog: rgba(PAL.bg_void, 0.08),
     spawnDensity: 0.55,
-    families: ["pest", "bandit"],
+    families: ["pest", "bandit", "spirit"],
   },
   mountain: {
     id: "mountain",
@@ -242,6 +242,7 @@ export const PROPS: Record<string, PropDefinition> = {
   shrine: { id: "shrine", name: "사당", biomes: ["village", "haunted"], w: 70, h: 64, radius: 32, solid: true, roof: true, layer: "prop", art: "shrine" },
   gate: { id: "gate", name: "문루", biomes: ["village"], w: 100, h: 40, radius: 20, solid: true, roof: true, layer: "prop", art: "gate" },
   tent: { id: "tent", name: "군막", biomes: ["road", "hanyang"], w: 48, h: 36, radius: 20, solid: true, roof: false, layer: "prop", art: "tent" },
+  wall: { id: "wall", name: "돌담", biomes: ["road", "mountain", "village"], w: 44, h: 22, radius: 16, solid: true, roof: false, layer: "prop", art: "wall" },
 };
 
 export const LOOT_TABLES: Record<string, { w: number; itemId: string; qty: number }[]> = {
@@ -573,8 +574,8 @@ export const SPAWN_FAMILY_TO_ENEMY: Record<SpawnFamily, string[]> = {
   bamboo: ["spirit", "dokkaebi", "wildlife", "beast"],
   river: ["wildlife", "spirit", "bandit", "swamp"],
   swamp: ["swamp", "pest"],
-  mountain: ["beast", "wildlife", "dokkaebi", "bandit"],
-  snow: ["beast", "wildlife", "spirit"],
+  mountain: ["beast", "wildlife", "dokkaebi", "bandit", "shrine"],
+  snow: ["beast", "wildlife", "spirit", "military"],
   wraith: ["undead", "spirit", "shrine"],
 };
 

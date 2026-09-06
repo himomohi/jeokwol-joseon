@@ -25,6 +25,7 @@ export const MAT: Record<string, Mat> = {
   ceramic: { fill: PAL.earth_mid, stroke: PAL.earth_dark },
   skin: { fill: PAL.earth_mid, stroke: PAL.earth_dark },
   hair: { fill: PAL.bg_void, stroke: PAL.shadow_navy },
+  stone: { fill: PAL.env_mid, stroke: PAL.shadow_navy, sheen: PAL.ui_steel },
 };
 
 export function matOf(id: string, tint?: string): Mat {
@@ -66,9 +67,13 @@ export function roundRect(
   ctx.closePath();
 }
 
+export function safeStroke(hex: string): string {
+  const raw = neighborStroke(hex);
+  return isPureBlack(raw) ? PAL.shadow_navy : raw;
+}
+
 export function fillStroke(ctx: CanvasRenderingContext2D, m: Mat, lw = 1.4): void {
-  const raw = neighborStroke(m.fill);
-  const stroke = isPureBlack(raw) ? PAL.shadow_navy : raw;
+  const stroke = safeStroke(m.fill);
   ctx.fillStyle = m.fill;
   ctx.fill();
   const sheen = m.sheen ?? neighborLight(m.fill);
@@ -95,4 +100,77 @@ export function ellipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx:
   ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
   fillStroke(ctx, m);
   ctx.restore();
+}
+
+export function poly(ctx: CanvasRenderingContext2D, pts: ReadonlyArray<readonly [number, number]>, m: Mat, lw = 1.4): void {
+  if (pts.length < 3) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0]![0], pts[0]![1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
+  ctx.closePath();
+  fillStroke(ctx, m, lw);
+}
+
+export function quadCurve(
+  ctx: CanvasRenderingContext2D,
+  pts: ReadonlyArray<readonly [number, number]>,
+  m: Mat,
+  lw = 1.4,
+): void {
+  if (pts.length < 3) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0]![0], pts[0]![1]);
+  for (let i = 1; i < pts.length - 1; i += 2) {
+    const c = pts[i]!;
+    const p = pts[i + 1] ?? pts[pts.length - 1]!;
+    ctx.quadraticCurveTo(c[0], c[1], p[0], p[1]);
+  }
+  ctx.closePath();
+  fillStroke(ctx, m, lw);
+}
+
+/** Joint limb: rounded capsule from (x1,y1) to (x2,y2). */
+export function capsule(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  r: number,
+  m: Mat,
+): void {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  ctx.beginPath();
+  ctx.moveTo(x1 + nx * r, y1 + ny * r);
+  ctx.lineTo(x2 + nx * r, y2 + ny * r);
+  ctx.arc(x2, y2, r, Math.atan2(ny, nx), Math.atan2(ny, nx) + Math.PI);
+  ctx.lineTo(x1 - nx * r, y1 - ny * r);
+  ctx.arc(x1, y1, r, Math.atan2(-ny, -nx), Math.atan2(ny, nx));
+  ctx.closePath();
+  fillStroke(ctx, m, 1.2);
+}
+
+export function horn(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  tipX: number,
+  tipY: number,
+  w: number,
+  m: Mat,
+): void {
+  const dx = tipX - x;
+  const dy = tipY - y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / len) * w;
+  const ny = (dx / len) * w;
+  poly(ctx, [
+    [x + nx, y + ny],
+    [tipX, tipY],
+    [x - nx, y - ny],
+  ], m, 1.1);
 }

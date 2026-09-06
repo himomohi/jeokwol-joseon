@@ -46,7 +46,7 @@ export interface JobDef {
   weapon: WeaponType;
   hue: string;
   robe: string;
-  hat: "gat" | "gatTall" | "songnak" | "manggeon" | "jeonrip" | "none";
+  hat: "gat" | "gatTall" | "songnak" | "manggeon" | "jeonrip" | "jeollip" | "helm" | "none";
   desc: string;
   baseStats: Stats;
   perLevel: Partial<Stats>;
@@ -82,7 +82,7 @@ export const JOBS: Record<JobId, JobDef> = {
     weapon: "bow",
     hue: PAL.moss_cool,
     robe: PAL.env_mid,
-    hat: "jeonrip",
+    hat: "jeollip",
     desc: "각궁으로 거리를 지배하는 사수.",
     baseStats: { atk: 13, def: 5, maxHp: 110, maxMp: 50, spd: 136, crit: 0.1, haste: 1, luck: 6 },
     perLevel: { atk: 2.0, def: 0.9, maxHp: 12, maxMp: 4, crit: 0.004 },
@@ -189,7 +189,7 @@ export const JOBS: Record<JobId, JobDef> = {
     weapon: "spear",
     hue: PAL.earth_dark,
     robe: PAL.shadow_navy,
-    hat: "gat",
+    hat: "helm",
     desc: "창끝으로 진형을 꿰뚫는다.",
     baseStats: { atk: 17, def: 12, maxHp: 175, maxMp: 45, spd: 130, crit: 0.07, haste: 1, luck: 4 },
     perLevel: { atk: 2.4, def: 1.8, maxHp: 20, maxMp: 3 },

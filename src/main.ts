@@ -12,6 +12,14 @@ import { bootPrep } from "./app/boot";
 const canvas = document.getElementById("world") as HTMLCanvasElement;
 const uiRoot = document.getElementById("ui-root") as HTMLElement;
 
+const sheetMode = new URLSearchParams(location.search).get("sheet") === "1";
+if (sheetMode) {
+  void import("./art/sheet").then(({ paintJoseonSheet }) => {
+    paintJoseonSheet(canvas);
+    uiRoot.innerHTML = `<div style="position:fixed;left:12px;top:12px;color:#EDE4D4;font:14px serif">적월조선 실루엣</div>`;
+  });
+}
+
 const sim = createEmptySim();
 const renderer = new Renderer(canvas);
 const input = createInput();
@@ -130,4 +138,4 @@ function frame(tms: number): void {
   requestAnimationFrame(frame);
 }
 
-requestAnimationFrame(frame);
+if (!sheetMode) requestAnimationFrame(frame);
