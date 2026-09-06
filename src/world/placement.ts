@@ -179,8 +179,20 @@ export function designedCampProps(): DesignedProp[] {
   ];
 }
 
+export function biomeAccentProps(): DesignedProp[] {
+  const swamp = POI.swamp!;
+  const rice = POI.rice!;
+  return [
+    { id: "accent_swamp_dead0", def: PROPS.deadtree!, x: swamp.x, y: swamp.y + 200 },
+    { id: "accent_swamp_dead1", def: PROPS.deadtree!, x: swamp.x + 180, y: swamp.y + 180 },
+    { id: "accent_swamp_reed0", def: PROPS.reed!, x: swamp.x - 80, y: swamp.y + 220 },
+    { id: "accent_rice_pine0", def: PROPS.pine!, x: rice.x - 90, y: rice.y + 50 },
+    { id: "accent_rice_bamboo0", def: PROPS.bamboo!, x: rice.x + 70, y: rice.y - 40 },
+  ];
+}
+
 export function designedFieldProps(): DesignedProp[] {
-  return [...poiStructures(), ...designedCampProps()];
+  return [...poiStructures(), ...designedCampProps(), ...biomeAccentProps()];
 }
 
 export function designedTentSites(): { x: number; y: number; why: string }[] {

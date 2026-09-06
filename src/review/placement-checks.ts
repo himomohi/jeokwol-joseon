@@ -59,6 +59,24 @@ export function reviewPlacement(notes: string[]): void {
   reviewDensity(notes, cache);
   reviewTrainers(notes, cache);
   reviewDepthLayers(notes, cache);
+  reviewFieldSeeds(notes);
+}
+
+function reviewFieldSeeds(notes: string[]): void {
+  for (const seed of [2, 7, 99]) {
+    const cache = new TerrainCache(seed, 16);
+    for (const [x, y] of [
+      [0, 0],
+      [POI.rice!.x, POI.rice!.y],
+      [POI.pass!.x, POI.pass!.y],
+      [POI.hansung!.x, POI.hansung!.y],
+    ] as const) {
+      for (const p of gather(cache, x, y, 1)) {
+        if (p.id.startsWith("p_") && p.def.id === "tent") notes.push(`시드 ${seed} 필드 천막`);
+        if (p.def.art === "tent" && !tentSiteAllowed(p.x, p.y)) notes.push(`시드 ${seed} 불법 천막`);
+      }
+    }
+  }
 }
 
 function reviewTents(notes: string[], cache: TerrainCache): void {
@@ -134,12 +152,20 @@ function reviewBiomeMix(notes: string[], cache: TerrainCache): void {
     if (mix.some((p) => p.id === "tent")) notes.push(`${id} 필드 혼합에 천막`);
   }
 
-  const suburb = gather(cache, POI.rice!.x, POI.rice!.y, 1).filter((p) => biomeAt(1, p.x, p.y) === "hanyang" && !p.def.roof);
-  const swamp = gather(cache, POI.swamp!.x, POI.swamp!.y, 1).filter((p) => biomeAt(1, p.x, p.y) === "swamp" && !p.def.roof);
-  if (suburb.length && !suburb.some((p) => p.def.art === "pine")) notes.push("근교에 소나무 스폰 없음");
-  if (suburb.length && !suburb.some((p) => p.def.art === "bamboo")) notes.push("근교에 대나무 스폰 없음");
-  if (swamp.length && !swamp.some((p) => p.def.art === "reed")) notes.push("늪에 갈대 스폰 없음");
-  if (swamp.length && !swamp.some((p) => p.def.art === "deadtree")) notes.push("늪에 고목 스폰 없음");
+  const rice = POI.rice!;
+  const swampPoi = POI.swamp!;
+  const suburb = gather(cache, rice.x, rice.y, 1).filter((p) => {
+    const b = biomeAt(1, p.x, p.y);
+    return (b === "hanyang" || Math.hypot(p.x - rice.x, p.y - rice.y) < 360) && !p.def.roof;
+  });
+  const swamp = gather(cache, swampPoi.x, swampPoi.y, 1).filter((p) => {
+    const b = biomeAt(1, p.x, p.y);
+    return (b === "swamp" || Math.hypot(p.x - swampPoi.x, p.y - swampPoi.y) < 480) && !p.def.roof;
+  });
+  if (!suburb.some((p) => p.def.art === "pine")) notes.push("근교에 소나무 스폰 없음");
+  if (!suburb.some((p) => p.def.art === "bamboo")) notes.push("근교에 대나무 스폰 없음");
+  if (!swamp.some((p) => p.def.art === "reed")) notes.push("늪에 갈대 스폰 없음");
+  if (!swamp.some((p) => p.def.art === "deadtree")) notes.push("늪에 고목 스폰 없음");
 }
 
 function reviewDensity(notes: string[], cache: TerrainCache): void {
@@ -181,13 +207,15 @@ function reviewTrainers(notes: string[], cache: TerrainCache): void {
 }
 
 function reviewDepthLayers(notes: string[], cache: TerrainCache): void {
-  const village = gather(cache, 0, 0, 0);
-  const roofs = cache.around(0, 0, 0, 0).flatMap((c) => c.roofs);
+  const village = gather(cache, 0, 0, 1).filter((p) => Math.hypot(p.x, p.y) < 280);
+  const roofs = cache.around(0, 0, 0, 1).flatMap((c) => c.roofs);
   if (!village.some((p) => p.def.roof)) notes.push("한옥 roof 레이어 없음");
   if (roofs.length < 3) notes.push("지붕 오버레이 부족");
-  const chunk = cache.get(0, 0, 0);
-  if (chunk.props.some((p) => p.def.roof && !chunk.roofs.some((r) => r.art === p.def.art))) {
-    notes.push("지붕이 한옥과 어긋남");
+  for (const c of cache.around(0, 0, 0, 1)) {
+    for (const p of c.props) {
+      if (!p.def.roof || Math.hypot(p.x, p.y) > 280) continue;
+      if (!c.roofs.some((r) => r.art === p.def.art)) notes.push("지붕이 한옥과 어긋남");
+    }
   }
 }
 
