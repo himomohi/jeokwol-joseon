@@ -2,6 +2,7 @@ import { JOBS } from "../content/jobs";
 import { itemById } from "../content/items";
 import type { Actor } from "../world/sim";
 import type { PlayerMeta } from "../world/sim";
+import { PAL, neighborStroke, rgba } from "./palette";
 import { ellipse, fillStroke, matOf } from "./materials";
 import { joint, poseOf } from "./poses";
 import { drawHat, drawWeaponForm } from "./forms";
@@ -12,17 +13,17 @@ export interface DrawVis {
   weaponForm: string;
   weaponTint: string;
   weaponMat: string;
-  armorTint?: string;
+  armorKind: "robe" | "armor";
   horse: boolean;
 }
 
 export function visFrom(meta: PlayerMeta | null, actor: Actor): DrawVis {
   if (actor.kind !== "player" || !meta) {
-    return { robe: "#3a2416", hat: "none", weaponForm: "sword", weaponTint: "#8a9399", weaponMat: "iron", horse: false };
+    return { robe: PAL.earth_dark, hat: "none", weaponForm: "sword", weaponTint: PAL.ui_steel, weaponMat: "iron", armorKind: "robe", horse: false };
   }
   const job = JOBS[meta.job];
   let weaponForm = weaponDefault(job.weapon);
-  let weaponTint = "#8a9399";
+  let weaponTint: string = PAL.ui_steel;
   let weaponMat = "iron";
   const winst = meta.equip.weapon ? meta.inventory.find((i) => i.instId === meta.equip.weapon) : undefined;
   const w = winst ? itemById(winst.itemId) : undefined;
@@ -39,7 +40,7 @@ export function visFrom(meta: PlayerMeta | null, actor: Actor): DrawVis {
     weaponForm,
     weaponTint,
     weaponMat,
-    armorTint: chest?.visual.tint,
+    armorKind: chest?.visual.form === "armor" ? "armor" : "robe",
     horse: job.base === "gibyeong",
   };
 }
@@ -60,32 +61,20 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
   if (actor.flash > 0) ctx.globalAlpha = 0.55 + Math.sin(actor.flash * 40) * 0.3;
 
   if (vis.horse) {
-    ellipse(ctx, 0, 6, 16, 10, matOf("leather", "#3a2416"));
-    ellipse(ctx, 12, 4, 7, 5, matOf("leather", "#3a2416"));
+    ellipse(ctx, 0, 7, 17, 10, matOf("leather"));
+    ellipse(ctx, 13, 4, 7, 5, matOf("leather"));
   }
 
   const hip = joint(pose, "hip");
   ctx.translate(hip.x, hip.y);
-  ellipse(ctx, 0, 10, 5, 7, matOf("cotton", "#2a1a14"));
-  ellipse(ctx, 6, 12, 4, 6, matOf("cotton", "#2a1a14"));
+  ellipse(ctx, -3, 11, 5, 7, matOf("cotton"));
+  ellipse(ctx, 6, 12, 4.2, 6, matOf("cotton"));
 
   const torso = joint(pose, "torso");
   ctx.save();
   ctx.translate(torso.x, torso.y);
   ctx.rotate(torso.rot);
-  ctx.beginPath();
-  ctx.moveTo(-9, 4);
-  ctx.lineTo(-7, -12);
-  ctx.lineTo(7, -12);
-  ctx.lineTo(9, 4);
-  ctx.closePath();
-  fillStroke(ctx, matOf("silk", vis.robe));
-  ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(0, 4);
-  ctx.strokeStyle = "#e8dcc0";
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  drawTorso(ctx, vis.robe, vis.armorKind);
   ctx.restore();
 
   const armR = joint(pose, "armR");
@@ -102,10 +91,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
 
   const head = joint(pose, "head");
   ellipse(ctx, head.x, head.y, 7, 7.5, matOf("skin"));
-  ctx.fillStyle = "#1a1210";
-  ctx.beginPath();
-  ctx.arc(head.x, head.y - 3, 7, Math.PI, Math.PI * 2);
-  ctx.fill();
+  ellipse(ctx, head.x, head.y - 3, 7, 4, matOf("hair"));
 
   const hat = joint(pose, "hat");
   ctx.save();
@@ -117,6 +103,51 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
   ctx.restore();
 }
 
+function drawTorso(ctx: CanvasRenderingContext2D, robe: string, kind: "robe" | "armor"): void {
+  ctx.beginPath();
+  if (kind === "armor") {
+    ctx.moveTo(-11, 7);
+    ctx.lineTo(-13, -8);
+    ctx.lineTo(-6, -13);
+    ctx.lineTo(7, -13);
+    ctx.lineTo(13, -8);
+    ctx.lineTo(12, 7);
+    ctx.closePath();
+    fillStroke(ctx, matOf("steel", robe));
+    ctx.strokeStyle = neighborStroke(robe);
+    ctx.lineWidth = 1;
+    for (let y = -8; y <= 4; y += 4) {
+      ctx.beginPath();
+      ctx.moveTo(-10, y);
+      ctx.lineTo(10, y);
+      ctx.stroke();
+    }
+  } else {
+    ctx.moveTo(-12, 10);
+    ctx.lineTo(-7.5, -12);
+    ctx.lineTo(8, -12);
+    ctx.lineTo(13, 10);
+    ctx.closePath();
+    fillStroke(ctx, matOf("silk", robe));
+    ctx.strokeStyle = PAL.bone_light;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-8, -8);
+    ctx.lineTo(8, -8);
+    ctx.stroke();
+  }
+}
+
+function drawJoseonHuman(ctx: CanvasRenderingContext2D, robe: string, hat: string, kind: "robe" | "armor" = "robe"): void {
+  drawTorso(ctx, robe, kind);
+  ellipse(ctx, 0, -13, 6.5, 7, matOf("skin"));
+  drawHat(ctx, hat, matOf("horsehair"));
+}
+
 export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
   ctx.save();
   ctx.rotate(actor.facing + Math.PI / 2);
@@ -126,19 +157,18 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
   ctx.scale(g, g);
 
   if (art.startsWith("tiger")) {
-    ellipse(ctx, 0, 0, 16, 9, matOf("leather", art.includes("white") ? "#e8e4d8" : art.includes("blood") ? "#8b1520" : "#c45a20"));
-    ellipse(ctx, 14, -4, 8, 6, matOf("leather", "#c45a20"));
-    ctx.fillStyle = "#1a1210";
-    for (let i = -8; i <= 8; i += 5) {
-      ctx.fillRect(i, -6, 2, 10);
-    }
-    ellipse(ctx, -12, 4, 4, 3, matOf("leather", "#c45a20"));
+    const fur = art.includes("white") ? PAL.bone_light : art.includes("blood") ? PAL.blood_mid : PAL.earth_dark;
+    ellipse(ctx, 0, 0, 16, 9, matOf("leather", fur));
+    ellipse(ctx, 14, -4, 8, 6, matOf("leather", fur));
+    ctx.fillStyle = PAL.shadow_navy;
+    for (let i = -8; i <= 8; i += 5) ctx.fillRect(i, -6, 2, 10);
+    ellipse(ctx, -12, 4, 4, 3, matOf("leather", fur));
   } else if (art === "wolf" || art === "boar" || art === "bear" || art === "goat" || art === "beast") {
-    const c = art === "bear" ? "#3a2416" : art === "boar" ? "#5a3a22" : "#4a3a32";
+    const c = art === "bear" ? PAL.earth_dark : art === "boar" ? PAL.earth_mid : PAL.shadow_navy;
     ellipse(ctx, 0, 0, art === "bear" ? 16 : 12, 8, matOf("leather", c));
     ellipse(ctx, 11, -3, 6, 5, matOf("leather", c));
   } else if (art.startsWith("dokkaebi") || art === "will_o") {
-    ellipse(ctx, 0, -2, 8, 11, matOf("silk", art.includes("iron") ? "#6a7078" : "#2a6a3a"));
+    ellipse(ctx, 0, -2, 8, 11, matOf("silk", art.includes("iron") ? PAL.ui_steel : PAL.moss_cool));
     ctx.beginPath();
     ctx.moveTo(-6, -12);
     ctx.lineTo(-10, -20);
@@ -146,17 +176,18 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
     ctx.moveTo(6, -12);
     ctx.lineTo(10, -20);
     ctx.lineTo(2, -12);
-    ctx.fillStyle = "#e8dcc0";
+    ctx.fillStyle = PAL.bone_light;
     ctx.fill();
     if (art === "will_o") {
-      ctx.shadowColor = "#ffaa44";
+      ctx.shadowColor = PAL.torch_hot;
       ctx.shadowBlur = 12;
-      ellipse(ctx, 0, 0, 7, 7, matOf("silk", "#ffaa44"));
+      ellipse(ctx, 0, 0, 7, 7, matOf("silk", PAL.torch_hot));
     }
   } else if (art === "gumiho" || art === "gumiho_lady" || art === "fox") {
-    ellipse(ctx, 0, 0, 9, 12, matOf("silk", "#c47840"));
+    const fur = art === "gumiho_lady" ? PAL.blood_mid : PAL.earth_mid;
+    ellipse(ctx, 0, 0, 9, 12, matOf("silk", fur));
     for (let i = 0; i < (art.includes("gumiho") ? 5 : 1); i++) {
-      ellipse(ctx, -8 - i, 6 + i * 2, 4, 10, matOf("silk", "#c47840"), 0.6 + i * 0.15);
+      ellipse(ctx, -8 - i, 6 + i * 2, 4, 10, matOf("silk", fur), 0.6 + i * 0.15);
     }
     ellipse(ctx, 0, -14, 6, 6, matOf("skin"));
   } else if (art === "ghost" || art === "ghost_long" || art === "spirit") {
@@ -166,36 +197,38 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
     ctx.quadraticCurveTo(-12, -8, 0, -14);
     ctx.quadraticCurveTo(12, -8, 8, 12);
     ctx.closePath();
-    fillStroke(ctx, matOf("silk", "#c8d0e8"));
+    fillStroke(ctx, matOf("silk", PAL.ui_steel));
   } else if (art === "gangsi" || art === "skel" || art === "reaper") {
-    ellipse(ctx, 0, 0, 8, 13, matOf("cotton", art === "reaper" ? "#1a1a22" : "#d0c8b0"));
+    ellipse(ctx, 0, 0, 8, 13, matOf("cotton", art === "reaper" ? PAL.bg_void : PAL.bone_light));
     ellipse(ctx, 0, -14, 6, 6, matOf("bone"));
+    if (art === "reaper") drawHat(ctx, "songnak", matOf("horsehair"));
   } else if (art === "soldier" || art === "soldier_bow" || art === "officer" || art === "cavalry" || art.includes("bandit")) {
-    ellipse(ctx, 0, 2, 8, 12, matOf("silk", art.includes("officer") ? "#4a1a20" : art.includes("bandit") ? "#3a3228" : "#2a3a28"));
-    ellipse(ctx, 0, -12, 6.5, 7, matOf("skin"));
-    drawHat(ctx, art === "cavalry" || art === "officer" ? "jeonrip" : art.includes("bandit") ? "gat" : "jeonrip", matOf("horsehair"));
+    const robe = art.includes("officer") ? PAL.blood_mid : art.includes("bandit") ? PAL.earth_dark : PAL.moss_cool;
+    const hat = art === "cavalry" || art === "officer" ? "jeonrip" : art.includes("bandit") ? "gat" : "jeonrip";
+    const kind = art === "officer" || art === "soldier" || art === "soldier_bow" ? "armor" : "robe";
+    drawJoseonHuman(ctx, robe, hat, kind);
     if (art === "cavalry") ellipse(ctx, 0, 10, 14, 8, matOf("leather"));
   } else if (art === "croc" || art === "imugi" || art === "imugi_king") {
-    ellipse(ctx, 0, 0, 18, 8, matOf("jade", "#2a5a32"));
-    ellipse(ctx, 16, -2, 8, 5, matOf("jade", "#2a5a32"));
+    ellipse(ctx, 0, 0, 18, 8, matOf("jade", PAL.moss_cool));
+    ellipse(ctx, 16, -2, 8, 5, matOf("jade", PAL.moss_cool));
   } else if (art === "statue" || art === "mask" || art === "bell" || art === "lantern" || art === "abbot") {
-    ellipse(ctx, 0, 0, 10, 14, matOf("stone" in {} ? "iron" : "iron", "#6a6058"));
-    ellipse(ctx, 0, -14, 7, 7, matOf("stone" as string, "#8a8078"));
+    ellipse(ctx, 0, 0, 10, 14, matOf("iron", PAL.earth_dark));
+    ellipse(ctx, 0, -14, 7, 7, matOf("iron", PAL.earth_mid));
+    if (art === "abbot") drawHat(ctx, "songnak", matOf("silk", PAL.earth_dark));
   } else if (art === "witch") {
-    ellipse(ctx, 0, 0, 8, 13, matOf("silk", "#3a6b28"));
-    ellipse(ctx, 0, -14, 6, 6, matOf("skin"));
+    drawJoseonHuman(ctx, PAL.moss_cool, "songnak");
   } else if (art === "bird") {
     ellipse(ctx, 0, 0, 8, 5, matOf("hair"));
     ctx.beginPath();
     ctx.moveTo(-12, 0);
     ctx.lineTo(0, -4);
     ctx.lineTo(12, 0);
+    ctx.fillStyle = PAL.shadow_navy;
     ctx.fill();
   } else if (art === "snake" || art === "bug" || art === "rat") {
-    ellipse(ctx, 0, 0, art === "snake" ? 12 : 6, 4, matOf("leather", "#3a6b28"));
+    ellipse(ctx, 0, 0, art === "snake" ? 12 : 6, 4, matOf("leather", PAL.moss_cool));
   } else {
-    ellipse(ctx, 0, 0, 8, 12, matOf("cotton", "#4a3020"));
-    ellipse(ctx, 0, -12, 6, 6, matOf("skin"));
+    drawJoseonHuman(ctx, PAL.earth_dark, "gat");
   }
   ctx.filter = "none";
   ctx.restore();
@@ -203,10 +236,10 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
 
 export function drawNpc(ctx: CanvasRenderingContext2D, actor: Actor): void {
   ctx.save();
-  ctx.rotate(0.2);
-  ellipse(ctx, 0, 2, 8, 12, matOf("silk", actor.art === "npc_trainer" ? "#8b1520" : actor.art === "npc_shop" ? "#c9a46a" : "#3a3a40"));
-  ellipse(ctx, 0, -12, 6.5, 7, matOf("skin"));
-  drawHat(ctx, actor.art === "npc_trainer" ? "gat" : "manggeon", matOf("horsehair"));
+  ctx.rotate(0.15);
+  const robe = actor.art === "npc_trainer" ? PAL.blood_mid : actor.art === "npc_shop" ? PAL.earth_mid : PAL.earth_dark;
+  const hat = actor.art === "npc_shop" ? "manggeon" : "gat";
+  drawJoseonHuman(ctx, robe, hat);
   ctx.restore();
 }
 
@@ -215,7 +248,7 @@ export function drawShadow(ctx: CanvasRenderingContext2D, r: number): void {
   ctx.scale(1, 0.45);
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillStyle = rgba(PAL.bg_void, 0.42);
   ctx.fill();
   ctx.restore();
 }

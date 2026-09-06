@@ -1,3 +1,5 @@
+import { PAL } from "../art/palette";
+
 export interface Particle {
   x: number;
   y: number;
@@ -23,12 +25,12 @@ export class ParticlePool {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = 20 + Math.random() * 80;
-      if (kind === "hit") this.spawn({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.25, size: 2.5, color: "#e8dcc0", kind: "spark" });
-      else if (kind === "kill") this.spawn({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, life: 0.45, size: 3, color: "#8b1520", kind: "blood" });
-      else if (kind === "heal") this.spawn({ x, y, vx: Math.cos(a) * 10, vy: -30 - Math.random() * 20, life: 0.5, size: 3, color: "#7ad0a0", kind: "glow" });
-      else if (kind === "loot") this.spawn({ x, y, vx: Math.cos(a) * 20, vy: -40, life: 0.4, size: 3, color: "#c9a46a", kind: "glow" });
-      else if (kind === "dash") this.spawn({ x, y, vx: Math.cos(a) * 30, vy: Math.sin(a) * 30, life: 0.3, size: 4, color: "#c9b48a", kind: "smoke" });
-      else this.spawn({ x, y, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40, life: 0.35, size: 3, color: "#c45a40", kind: "glow" });
+      if (kind === "hit") this.spawn({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.25, size: 2.5, color: PAL.bone_light, kind: "spark" });
+      else if (kind === "kill") this.spawn({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, life: 0.45, size: 3, color: PAL.blood_main, kind: "blood" });
+      else if (kind === "heal") this.spawn({ x, y, vx: Math.cos(a) * 10, vy: -30 - Math.random() * 20, life: 0.5, size: 3, color: PAL.moss_cool, kind: "glow" });
+      else if (kind === "loot") this.spawn({ x, y, vx: Math.cos(a) * 20, vy: -40, life: 0.4, size: 3, color: PAL.torch_warm, kind: "glow" });
+      else if (kind === "dash") this.spawn({ x, y, vx: Math.cos(a) * 30, vy: Math.sin(a) * 30, life: 0.3, size: 4, color: PAL.earth_mid, kind: "smoke" });
+      else this.spawn({ x, y, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40, life: 0.35, size: 3, color: PAL.blood_hot, kind: "glow" });
     }
   }
 

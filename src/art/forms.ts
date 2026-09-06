@@ -1,4 +1,5 @@
 import type { WeaponType } from "../core/types";
+import { PAL } from "./palette";
 import { ellipse, fillStroke, matOf, roundRect, type Mat } from "./materials";
 
 export function drawWeaponForm(ctx: CanvasRenderingContext2D, form: string, tint: string, material: string, scale = 1): void {
@@ -37,7 +38,7 @@ export function drawWeaponForm(ctx: CanvasRenderingContext2D, form: string, tint
       ctx.moveTo(-2, -14);
       ctx.lineTo(8, 0);
       ctx.lineTo(-2, 14);
-      ctx.strokeStyle = "#e8dcc0";
+      ctx.strokeStyle = PAL.bone_light;
       ctx.lineWidth = 1;
       ctx.stroke();
       break;
@@ -53,7 +54,7 @@ export function drawWeaponForm(ctx: CanvasRenderingContext2D, form: string, tint
     case "talisman":
       roundRect(ctx, -6, -10, 12, 18, 1);
       fillStroke(ctx, m, 1);
-      ctx.fillStyle = "#8b1520";
+      ctx.fillStyle = PAL.blood_main;
       ctx.fillRect(-3, -6, 6, 2);
       ctx.fillRect(-2, -2, 4, 8);
       break;
@@ -96,6 +97,8 @@ export function drawWeaponForm(ctx: CanvasRenderingContext2D, form: string, tint
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(0, 10);
+      ctx.strokeStyle = PAL.moss_cool;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
       break;
     default:
@@ -108,10 +111,10 @@ export function drawHat(ctx: CanvasRenderingContext2D, kind: string, m: Mat): vo
   ctx.save();
   if (kind === "gat" || kind === "gatTall") {
     ctx.beginPath();
-    ctx.ellipse(0, 0, kind === "gatTall" ? 14 : 12, 3.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 1, kind === "gatTall" ? 16 : 14, 4.2, 0, 0, Math.PI * 2);
     fillStroke(ctx, matOf("horsehair"));
     ctx.beginPath();
-    ctx.rect(-3, -10, 6, 10);
+    ctx.rect(-3.2, -12, 6.4, 13);
     fillStroke(ctx, matOf("horsehair"));
   } else if (kind === "jeonrip") {
     ctx.beginPath();

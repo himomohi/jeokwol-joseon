@@ -3,27 +3,28 @@ import type { BiomeId } from "../core/types";
 import { TILE } from "../core/coords";
 import { randAt } from "../world/noise";
 import type { ChunkData, PropInst } from "../world/map";
+import { PAL, rgba, snapEnv } from "./palette";
 import { ellipse, fillStroke, matOf, roundRect } from "./materials";
 
 export function drawTile(ctx: CanvasRenderingContext2D, biome: BiomeId, x: number, y: number, seed: number): void {
   const b = BIOMES[biome];
   const t = randAt(Math.floor(x / TILE), Math.floor(y / TILE), seed, 3);
-  ctx.fillStyle = t > 0.5 ? b.grass2 : b.grass;
+  ctx.fillStyle = snapEnv(t > 0.5 ? b.grass2 : b.grass);
   ctx.fillRect(x, y, TILE + 1, TILE + 1);
   if (biome === "road") {
-    ctx.fillStyle = b.dirt;
+    ctx.fillStyle = snapEnv(b.dirt);
     ctx.fillRect(x, y + 8, TILE + 1, TILE - 16);
   }
   if (biome === "riverside" || biome === "swamp") {
     if (t > 0.82) {
-      ctx.fillStyle = b.water ?? "#2a5a6a";
+      ctx.fillStyle = snapEnv(b.water ?? PAL.env_cool);
       ctx.globalAlpha = 0.55;
       ctx.fillRect(x, y, TILE + 1, TILE + 1);
       ctx.globalAlpha = 1;
     }
   }
   if (biome === "snow") {
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillStyle = rgba(PAL.bone_light, 0.22);
     ctx.fillRect(x, y, TILE + 1, TILE + 1);
   }
 }
@@ -49,23 +50,23 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(14, 4);
     ctx.lineTo(-14, 4);
     ctx.closePath();
-    fillStroke(ctx, matOf("jade", "#1e4a28"));
-    ctx.fillStyle = "#4a3020";
+    fillStroke(ctx, matOf("jade", PAL.moss_cool));
+    ctx.fillStyle = PAL.earth_dark;
     ctx.fillRect(-2, 4, 4, 8);
   } else if (art === "bamboo") {
-    ctx.strokeStyle = "#2a6a34";
+    ctx.strokeStyle = PAL.moss_cool;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(0, 8);
     ctx.lineTo(2, -32);
     ctx.stroke();
-    ctx.strokeStyle = "#1a4a24";
+    ctx.strokeStyle = PAL.env_mid;
     ctx.beginPath();
     ctx.moveTo(5, 8);
     ctx.lineTo(7, -28);
     ctx.stroke();
   } else if (art === "deadtree") {
-    ctx.strokeStyle = "#3a3228";
+    ctx.strokeStyle = PAL.earth_dark;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(0, 8);
@@ -75,9 +76,9 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(10, -30);
     ctx.stroke();
   } else if (art === "rock") {
-    ellipse(ctx, 0, 0, 12, 8, matOf("iron", "#6a6058"));
+    ellipse(ctx, 0, 0, 12, 8, matOf("iron", PAL.earth_dark));
   } else if (art === "reed") {
-    ctx.strokeStyle = "#6a7a40";
+    ctx.strokeStyle = PAL.moss_cool;
     ctx.beginPath();
     ctx.moveTo(0, 6);
     ctx.lineTo(-2, -16);
@@ -85,50 +86,55 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
     ctx.lineTo(6, -14);
     ctx.stroke();
   } else if (art === "bush") {
-    ellipse(ctx, 0, 0, 12, 8, matOf("jade", "#2a5a30"));
+    ellipse(ctx, 0, 0, 12, 8, matOf("jade", PAL.moss_cool));
   } else if (art === "lantern") {
-    ctx.fillStyle = "#3a2416";
+    ctx.fillStyle = PAL.earth_dark;
     ctx.fillRect(-3, 4, 6, 8);
-    ctx.fillStyle = "#e8a040";
-    ctx.shadowColor = "#ffaa44";
+    ctx.fillStyle = PAL.torch_warm;
+    ctx.shadowColor = PAL.torch_hot;
     ctx.shadowBlur = 10;
     roundRect(ctx, -6, -10, 12, 14, 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
   } else if (art === "campfire") {
-    ellipse(ctx, 0, 4, 10, 5, matOf("iron", "#3a2a20"));
-    ctx.fillStyle = "#e07030";
+    ellipse(ctx, 0, 4, 10, 5, matOf("iron", PAL.earth_dark));
+    ctx.fillStyle = PAL.torch_hot;
     ctx.beginPath();
     ctx.moveTo(-6, 2);
     ctx.lineTo(0, -12);
     ctx.lineTo(6, 2);
     ctx.fill();
   } else if (art === "grave") {
-    ctx.fillStyle = "#6a6058";
+    ctx.fillStyle = PAL.earth_dark;
     roundRect(ctx, -6, -10, 12, 18, 3);
     ctx.fill();
   } else if (art === "house" || art === "shop" || art === "shrine" || art === "gate") {
     const w = p.def.w;
     const h = p.def.h;
-    ctx.fillStyle = "#5a4030";
+    ctx.fillStyle = PAL.earth_mid;
     ctx.fillRect(-w * 0.42, -h * 0.15, w * 0.84, h * 0.45);
-    ctx.fillStyle = "#8b1520";
+    ctx.strokeStyle = PAL.earth_dark;
+    ctx.strokeRect(-w * 0.42, -h * 0.15, w * 0.84, h * 0.45);
+    ctx.fillStyle = PAL.earth_dark;
     ctx.beginPath();
     ctx.moveTo(-w * 0.5, -h * 0.15);
     ctx.lineTo(0, -h * 0.65);
     ctx.lineTo(w * 0.5, -h * 0.15);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#3a0c12";
+    ctx.strokeStyle = PAL.shadow_navy;
     ctx.stroke();
-    ctx.fillStyle = "#e8dcc0";
+    ctx.fillStyle = PAL.bone_light;
     ctx.fillRect(-8, 4, 16, 14);
+    ctx.strokeStyle = PAL.earth_dark;
+    ctx.strokeRect(-8, 4, 16, 14);
   } else if (art === "tent") {
     ctx.beginPath();
     ctx.moveTo(-20, 10);
     ctx.lineTo(0, -16);
     ctx.lineTo(20, 10);
     ctx.closePath();
-    fillStroke(ctx, matOf("cotton", "#6a4030"));
+    fillStroke(ctx, matOf("cotton", PAL.earth_dark));
   }
   ctx.restore();
 }
@@ -136,14 +142,14 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
 export function drawRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, alpha: number): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#8b1520";
+  ctx.fillStyle = PAL.earth_dark;
   ctx.beginPath();
   ctx.moveTo(x, y + h * 0.55);
   ctx.lineTo(x + w * 0.5, y);
   ctx.lineTo(x + w, y + h * 0.55);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#3a0c12";
+  ctx.strokeStyle = PAL.shadow_navy;
   ctx.stroke();
   ctx.restore();
 }

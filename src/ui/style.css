@@ -1,16 +1,26 @@
+/* Joseon locked-16 working palette (PROPOSAL). Source of truth: src/art/palette.ts */
 :root {
-  --ink: #14080c;
-  --paper: #e8dcc0;
-  --gold: #c9a46a;
-  --blood: #8b1520;
-  --muted: #8a7060;
-  --panel: rgba(12, 6, 8, 0.86);
-  --line: rgba(201, 164, 106, 0.45);
+  --ink: #0B0A14;
+  --paper: #EDE4D4;
+  --gold: #E0A81C;
+  --gold-hot: #F0C86A;
+  --blood: #C41E3A;
+  --blood-mid: #8A1220;
+  --blood-hot: #F24555;
+  --blood-deep: #3F0A12;
+  --muted: #6A7380;
+  --navy: #162033;
+  --env: #243552;
+  --env-cool: #3D5278;
+  --moss: #2F5A48;
+  --earth: #6E6256;
+  --panel: rgba(11, 10, 20, 0.86);
+  --line: rgba(224, 168, 28, 0.45);
   font-family: "Noto Serif KR", "Source Han Serif KR", "Batang", "Songti SC", serif;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: #0a0406; color: var(--paper); overflow: hidden; }
+html, body { margin: 0; height: 100%; background: var(--ink); color: var(--paper); overflow: hidden; }
 
 #shell { position: fixed; inset: 0; }
 #world { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: auto; }
@@ -25,20 +35,20 @@ html, body { margin: 0; height: 100%; background: #0a0406; color: var(--paper); 
 .bars { min-width: 220px; max-width: 360px; }
 .name-row { display: flex; gap: 8px; align-items: baseline; font-size: 14px; letter-spacing: 0.04em; }
 .name-row b { color: var(--gold); }
-.bar { height: 12px; background: #2a1014; border: 1px solid var(--line); margin-top: 4px; position: relative; }
+.bar { height: 12px; background: var(--blood-deep); border: 1px solid var(--line); margin-top: 4px; position: relative; }
 .bar > span { display: block; height: 100%; }
-.hp > span { background: linear-gradient(#c45a48, var(--blood)); }
-.mp > span { background: linear-gradient(#5a4a9a, #3b2d6b); }
-.xp > span { background: linear-gradient(#c9a46a, #8a7040); }
+.hp > span { background: linear-gradient(var(--blood-hot), var(--blood)); }
+.mp > span { background: linear-gradient(var(--env-cool), var(--env)); }
+.xp > span { background: linear-gradient(var(--gold-hot), var(--gold)); }
 .bar em { position: absolute; right: 6px; top: -1px; font-size: 10px; font-style: normal; color: var(--paper); }
 
 .minimap {
   width: 128px; height: 128px; border: 1px solid var(--line);
-  background: rgba(10,4,6,0.7);
+  background: var(--navy);
 }
 .hint {
   position: absolute; left: 16px; bottom: 92px;
-  font-size: 12px; color: var(--gold); text-shadow: 0 1px 0 #000;
+  font-size: 12px; color: var(--gold); text-shadow: 0 1px 0 var(--navy);
 }
 
 .skillbar {
@@ -51,7 +61,7 @@ html, body { margin: 0; height: 100%; background: #0a0406; color: var(--paper); 
   align-items: center; justify-content: center; font-size: 11px; position: relative;
 }
 .slot kbd { position: absolute; left: 3px; top: 2px; font-size: 9px; color: var(--gold); }
-.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.slot .cd { position: absolute; inset: 0; background: rgba(11, 10, 20, 0.45); display: flex; align-items: center; justify-content: center; font-size: 11px; }
 
 .messages {
   position: absolute; right: 16px; bottom: 92px; width: 280px;
@@ -60,7 +70,7 @@ html, body { margin: 0; height: 100%; background: #0a0406; color: var(--paper); 
 .messages div { background: var(--panel); border-left: 2px solid var(--gold); padding: 4px 8px; }
 
 .overlay {
-  position: absolute; inset: 0; background: rgba(8,2,4,0.72);
+  position: absolute; inset: 0; background: rgba(11, 10, 20, 0.78);
   display: flex; align-items: center; justify-content: center;
 }
 .card {
@@ -72,13 +82,13 @@ html, body { margin: 0; height: 100%; background: #0a0406; color: var(--paper); 
 .card p { color: var(--muted); line-height: 1.55; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 button {
-  background: #2a1014; color: var(--paper); border: 1px solid var(--gold);
+  background: var(--blood-deep); color: var(--paper); border: 1px solid var(--gold);
   padding: 8px 14px; cursor: pointer; font: inherit;
 }
-button:hover { background: var(--blood); }
-button.ghost { border-color: var(--line); }
+button:hover { background: var(--blood-mid); }
+button.ghost { border-color: var(--line); background: var(--navy); }
 input, select {
-  background: #1a0c10; color: var(--paper); border: 1px solid var(--line);
+  background: var(--navy); color: var(--paper); border: 1px solid var(--line);
   padding: 8px 10px; font: inherit;
 }
 
@@ -90,7 +100,7 @@ input, select {
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .item {
   border: 1px solid var(--line); padding: 8px; font-size: 12px; cursor: pointer;
-  background: rgba(20,8,10,0.5);
+  background: rgba(22, 32, 51, 0.55);
 }
 .item.on { outline: 1px solid var(--gold); }
 .item .sub { color: var(--muted); font-size: 11px; white-space: pre-wrap; }
@@ -102,7 +112,7 @@ input, select {
 }
 .dialog .who { color: var(--gold); margin-bottom: 6px; }
 
-.map-canvas { width: 100%; height: min(60vh, 420px); background: #0c0608; border: 1px solid var(--line); }
+.map-canvas { width: 100%; height: min(60vh, 420px); background: var(--ink); border: 1px solid var(--line); }
 
 .narrow-warn {
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%);

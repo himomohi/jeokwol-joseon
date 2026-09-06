@@ -9,6 +9,7 @@ import { loadSlot, saveSlot, slotInfo } from "../persistence/save";
 import { iconSvg } from "../art/icons";
 import { biomeAt } from "../world/map";
 import { reviewContent } from "../review/verify";
+import { PAL } from "../art/palette";
 
 export type Panel = "none" | "inv" | "skills" | "map" | "char" | "pause" | "help";
 
@@ -108,7 +109,7 @@ function titleHtml(ui: UiState): string {
     <div class="row">${slots}</div>
     <div class="row"><button data-new>새 행적</button><button data-load>불러오기</button></div>
     <p style="font-size:12px">WASD 이동 · 마우스 조준 · 클릭/J 공격 · 1–8 초식 · E 대화 · F 줍기 · I 행낭 · K 초식 · M 지도 · Esc 멈춤 · P 후처리</p>
-    <p style="font-size:11px;color:#8a7060">직 ${r.jobs} · 전직 ${r.adv} · 전직당 최소 초식 ${r.skillsPerAdvMin} · 초식 ${r.skills} · 적 ${r.enemies} · 보스 ${r.bosses} · 물산 ${r.items}${r.ok ? "" : " · " + r.notes.join(", ")}</p>
+    <p style="font-size:11px;color:var(--muted)">직 ${r.jobs} · 전직 ${r.adv} · 전직당 최소 초식 ${r.skillsPerAdvMin} · 초식 ${r.skills} · 적 ${r.enemies} · 보스 ${r.bosses} · 물산 ${r.items}${r.ok ? "" : " · " + r.notes.join(", ")}</p>
   </div></div>`;
 }
 
@@ -249,7 +250,7 @@ function drawMini(c: HTMLCanvasElement | null, sim: Sim): void {
   const ctx = c.getContext("2d");
   if (!ctx) return;
   const s = 6;
-  ctx.fillStyle = "#0c0608";
+  ctx.fillStyle = PAL.bg_void;
   ctx.fillRect(0, 0, 128, 128);
   const ox = sim.player.x - 64 * s;
   const oy = sim.player.y - 64 * s;
@@ -264,13 +265,13 @@ function drawMini(c: HTMLCanvasElement | null, sim: Sim): void {
       ctx.fillRect(x, y, 4, 4);
     }
   }
-  ctx.fillStyle = "#e8dcc0";
+  ctx.fillStyle = PAL.bone_light;
   ctx.fillRect(62, 62, 4, 4);
 }
 
 function drawBigMap(c: HTMLCanvasElement, sim: Sim): void {
   const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#0c0608";
+  ctx.fillStyle = PAL.bg_void;
   ctx.fillRect(0, 0, c.width, c.height);
   const scale = 8;
   const ox = sim.player.x - (c.width / 2) * scale;
@@ -286,9 +287,9 @@ function drawBigMap(c: HTMLCanvasElement, sim: Sim): void {
       ctx.fillRect(x, y, 3, 3);
     }
   }
-  ctx.fillStyle = "#e8dcc0";
+  ctx.fillStyle = PAL.bone_light;
   ctx.fillRect(c.width / 2 - 2, c.height / 2 - 2, 4, 4);
-  ctx.fillStyle = "#c9a46a";
+  ctx.fillStyle = PAL.torch_warm;
   ctx.font = "12px serif";
   for (const p of Object.values(POI)) {
     const x = (p.x - ox) / scale;

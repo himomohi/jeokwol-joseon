@@ -1,3 +1,5 @@
+import { KEY_LIGHT_DIR, PAL, nearestPal, neighborLight, neighborStroke, rgba } from "./palette";
+
 export interface Mat {
   fill: string;
   stroke: string;
@@ -5,30 +7,34 @@ export interface Mat {
 }
 
 export const MAT: Record<string, Mat> = {
-  silk: { fill: "#8b1520", stroke: "#3a0c12", sheen: "#c45a50" },
-  cotton: { fill: "#6a3a28", stroke: "#2a1810" },
-  leather: { fill: "#5a3a22", stroke: "#2a1c10" },
-  iron: { fill: "#8a9399", stroke: "#2a2e32", sheen: "#c8d0d4" },
-  steel: { fill: "#c0c8d0", stroke: "#3a4048", sheen: "#eef2f6" },
-  bloodsteel: { fill: "#8b1520", stroke: "#2a060a", sheen: "#e07070" },
-  wood: { fill: "#6b4a2a", stroke: "#2a2010" },
-  paper: { fill: "#e8dcc0", stroke: "#8b1520" },
-  bone: { fill: "#e8dcc0", stroke: "#6a5040" },
-  jade: { fill: "#5aaa7a", stroke: "#1a4030" },
-  horn: { fill: "#8a6040", stroke: "#3a2818" },
-  felt: { fill: "#3a2416", stroke: "#140c08" },
-  horsehair: { fill: "#1a1a1a", stroke: "#000" },
-  straw: { fill: "#c2a878", stroke: "#5a4030" },
-  lacquer: { fill: "#8b2a14", stroke: "#2a0804" },
-  ceramic: { fill: "#c9a46a", stroke: "#4a3020" },
-  skin: { fill: "#d4a07a", stroke: "#6a4030" },
-  hair: { fill: "#1a1210", stroke: "#000" },
+  silk: { fill: PAL.blood_mid, stroke: PAL.blood_deep, sheen: PAL.blood_hot },
+  cotton: { fill: PAL.earth_dark, stroke: PAL.shadow_navy },
+  leather: { fill: PAL.earth_dark, stroke: PAL.shadow_navy },
+  iron: { fill: PAL.ui_steel, stroke: PAL.shadow_navy, sheen: PAL.bone_light },
+  steel: { fill: PAL.ui_steel, stroke: PAL.env_mid, sheen: PAL.bone_light },
+  bloodsteel: { fill: PAL.blood_main, stroke: PAL.blood_deep, sheen: PAL.blood_hot },
+  wood: { fill: PAL.earth_dark, stroke: PAL.shadow_navy },
+  paper: { fill: PAL.bone_light, stroke: PAL.blood_deep },
+  bone: { fill: PAL.bone_light, stroke: PAL.earth_dark },
+  jade: { fill: PAL.moss_cool, stroke: PAL.env_mid },
+  horn: { fill: PAL.earth_dark, stroke: PAL.shadow_navy },
+  felt: { fill: PAL.earth_dark, stroke: PAL.shadow_navy },
+  horsehair: { fill: PAL.shadow_navy, stroke: PAL.env_mid },
+  straw: { fill: PAL.earth_mid, stroke: PAL.earth_dark },
+  lacquer: { fill: PAL.blood_mid, stroke: PAL.blood_deep, sheen: PAL.torch_warm },
+  ceramic: { fill: PAL.earth_mid, stroke: PAL.earth_dark },
+  skin: { fill: PAL.earth_mid, stroke: PAL.earth_dark },
+  hair: { fill: PAL.bg_void, stroke: PAL.shadow_navy },
 };
 
 export function matOf(id: string, tint?: string): Mat {
   const m = MAT[id] ?? MAT.cotton!;
-  if (!tint) return m;
-  return { ...m, fill: tint };
+  const fill = nearestPal(tint ?? m.fill);
+  return {
+    fill,
+    stroke: neighborStroke(fill),
+    sheen: m.sheen ?? neighborLight(fill),
+  };
 }
 
 export function roundRect(
@@ -50,10 +56,22 @@ export function roundRect(
 }
 
 export function fillStroke(ctx: CanvasRenderingContext2D, m: Mat, lw = 1.4): void {
+  const stroke = neighborStroke(m.fill);
   ctx.fillStyle = m.fill;
-  ctx.strokeStyle = m.stroke;
-  ctx.lineWidth = lw;
   ctx.fill();
+  const sheen = m.sheen ?? neighborLight(m.fill);
+  ctx.save();
+  ctx.clip();
+  const g = ctx.createLinearGradient(KEY_LIGHT_DIR.x * 30, KEY_LIGHT_DIR.y * 30, -KEY_LIGHT_DIR.x * 18, -KEY_LIGHT_DIR.y * 16);
+  g.addColorStop(0, rgba(sheen, 0.34));
+  g.addColorStop(0.5, rgba(sheen, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(-72, -72, 144, 144);
+  ctx.restore();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.stroke();
 }
 

@@ -1,3 +1,4 @@
+import { PAL, rgba } from "../art/palette";
 import type { Camera } from "../core/coords";
 import { clamp, lerp } from "../core/math";
 import type { Sim } from "../world/sim";
@@ -57,7 +58,7 @@ export class Renderer {
     const w = this.world.width;
     const h = this.world.height;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#14080c";
+    ctx.fillStyle = PAL.bg_void;
     ctx.fillRect(0, 0, w, h);
 
     const p = interpActor(sim.player, alpha);
@@ -119,9 +120,9 @@ export class Renderer {
           ctx.restore();
           if (a.kind === "enemy") {
             const ratio = clamp(a.hp / Math.max(1, a.hpMax), 0, 1);
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.fillStyle = rgba(PAL.shadow_navy, 0.72);
             ctx.fillRect(ip.x - 12, ip.y - a.radius - 10, 24, 4);
-            ctx.fillStyle = "#8b1520";
+            ctx.fillStyle = PAL.blood_main;
             ctx.fillRect(ip.x - 12, ip.y - a.radius - 10, 24 * ratio, 4);
           }
         },
@@ -138,8 +139,8 @@ export class Renderer {
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate(Math.atan2(pr.vy, pr.vx));
-          ctx.fillStyle = pr.team === 0 ? "#e8dcc0" : "#c45a40";
-          ctx.shadowColor = "#e8a040";
+          ctx.fillStyle = pr.team === 0 ? PAL.bone_light : PAL.blood_main;
+          ctx.shadowColor = PAL.torch_warm;
           ctx.shadowBlur = 8;
           ctx.fillRect(-8, -2, 12, 4);
           ctx.restore();
@@ -153,8 +154,8 @@ export class Renderer {
         z: 0,
         draw: () => {
           ctx.save();
-          ctx.strokeStyle = "rgba(200,80,40,0.8)";
-          ctx.fillStyle = `rgba(180,40,30,${0.18 + Math.max(0, 0.2 - aoe.wait)})`;
+          ctx.strokeStyle = rgba(PAL.blood_main, 0.8);
+          ctx.fillStyle = rgba(PAL.blood_deep, 0.18 + Math.max(0, 0.2 - aoe.wait));
           ctx.beginPath();
           ctx.arc(aoe.x, aoe.y, aoe.r, 0, Math.PI * 2);
           ctx.fill();
@@ -168,7 +169,7 @@ export class Renderer {
     for (const d of drawables) d.draw();
 
     ctx.save();
-    ctx.strokeStyle = "rgba(232,220,192,0.55)";
+    ctx.strokeStyle = rgba(PAL.bone_light, 0.55);
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -198,12 +199,18 @@ export class Renderer {
 
     const moon = 0.55 + 0.45 * Math.sin(sim.time * 0.04);
     const lights: Light[] = [
-      { x: p.x, y: p.y, r: 160, color: "rgba(255,180,90,0.28)", intensity: 0.7 },
+      { x: p.x, y: p.y, r: 160, color: rgba(PAL.torch_warm, 0.26), intensity: 0.62 },
     ];
     for (const c of chunks) {
       for (const pr of c.props) {
         if (pr.def.art === "lantern" || pr.def.art === "campfire") {
-          lights.push({ x: pr.x, y: pr.y, r: pr.def.art === "campfire" ? 90 : 70, color: "rgba(255,160,60,0.35)", intensity: 0.8 });
+          lights.push({
+            x: pr.x,
+            y: pr.y,
+            r: pr.def.art === "campfire" ? 90 : 70,
+            color: rgba(PAL.torch_hot, 0.32),
+            intensity: 0.78,
+          });
         }
       }
     }

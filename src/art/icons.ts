@@ -1,4 +1,5 @@
 import { ITEMS } from "../content/items";
+import { PAL, neighborStroke, rgba } from "./palette";
 import { drawWeaponForm } from "./forms";
 
 const cache = new Map<string, HTMLCanvasElement>();
@@ -13,7 +14,7 @@ export function iconCanvas(itemId: string, size = 48): HTMLCanvasElement {
   const ctx = c.getContext("2d")!;
   const it = ITEMS[itemId];
   ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = "rgba(20,10,12,0.4)";
+  ctx.fillStyle = rgba(PAL.shadow_navy, 0.55);
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size * 0.45, 0, Math.PI * 2);
   ctx.fill();
@@ -21,7 +22,7 @@ export function iconCanvas(itemId: string, size = 48): HTMLCanvasElement {
   ctx.scale(size / 48, size / 48);
   if (it) drawWeaponForm(ctx, it.visual.form, it.visual.tint, it.visual.material, 1.15);
   else {
-    ctx.fillStyle = "#c9a46a";
+    ctx.fillStyle = PAL.torch_warm;
     ctx.beginPath();
     ctx.arc(0, 0, 8, 0, Math.PI * 2);
     ctx.fill();
@@ -32,10 +33,10 @@ export function iconCanvas(itemId: string, size = 48): HTMLCanvasElement {
 
 export function iconSvg(itemId: string): string {
   const it = ITEMS[itemId];
-  const tint = it?.visual.tint ?? "#c9a46a";
+  const tint = it?.visual.tint ?? PAL.torch_warm;
   const form = it?.visual.form ?? "amulet";
   const path = formPath(form);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><rect width="32" height="32" rx="6" fill="#1a0c10"/><g fill="${tint}" stroke="#14080c" stroke-width="1">${path}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><rect width="32" height="32" rx="6" fill="${PAL.bg_void}"/><g fill="${tint}" stroke="${neighborStroke(tint)}" stroke-width="1">${path}</g></svg>`;
 }
 
 function formPath(form: string): string {

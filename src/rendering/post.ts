@@ -1,3 +1,5 @@
+import { PAL, parseHex } from "../art/palette";
+
 const VERT = `attribute vec2 a_pos; varying vec2 v_uv; void main(){ v_uv = a_pos*0.5+0.5; v_uv.y = 1.0-v_uv.y; gl_Position = vec4(a_pos,0.0,1.0); }`;
 
 const FRAG = `precision mediump float;
@@ -5,6 +7,7 @@ uniform sampler2D u_tex;
 uniform vec2 u_res;
 uniform float u_bloom;
 uniform float u_crt;
+uniform vec3 u_void;
 varying vec2 v_uv;
 vec3 sampleB(vec2 uv){ return texture2D(u_tex, uv).rgb; }
 void main(){
@@ -12,7 +15,7 @@ void main(){
   vec2 c = uv*2.0-1.0;
   c *= 1.0 + u_crt * 0.06 * dot(c,c);
   uv = c*0.5+0.5;
-  if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){ gl_FragColor = vec4(0.03,0.02,0.03,1.0); return; }
+  if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){ gl_FragColor = vec4(u_void,1.0); return; }
   vec3 col = sampleB(uv);
   vec2 px = 1.0/u_res;
   vec3 blur = vec3(0.0);
@@ -40,6 +43,7 @@ export class PostFx {
   private uRes: WebGLUniformLocation | null = null;
   private uBloom: WebGLUniformLocation | null = null;
   private uCrt: WebGLUniformLocation | null = null;
+  private uVoid: WebGLUniformLocation | null = null;
   canvas: HTMLCanvasElement;
 
   constructor(private dest: HTMLCanvasElement) {
@@ -79,6 +83,7 @@ export class PostFx {
     this.uRes = gl.getUniformLocation(p, "u_res");
     this.uBloom = gl.getUniformLocation(p, "u_bloom");
     this.uCrt = gl.getUniformLocation(p, "u_crt");
+    this.uVoid = gl.getUniformLocation(p, "u_void");
   }
 
   private shader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
@@ -112,6 +117,8 @@ export class PostFx {
     gl.uniform2f(this.uRes, w, h);
     gl.uniform1f(this.uBloom, bloom);
     gl.uniform1f(this.uCrt, crt);
+    const v = parseHex(PAL.bg_void);
+    gl.uniform3f(this.uVoid, v.r / 255, v.g / 255, v.b / 255);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return true;
   }
