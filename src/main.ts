@@ -80,6 +80,7 @@ function onEvents(): void {
       audio.sfx("kill");
     }
     if (e.type === "pickedUp") audio.sfx("loot");
+    if (e.type === "lootDropped") renderer.particles.burst(e.x, e.y, "loot", 8);
     if (e.type === "skillUsed") audio.sfx("skill");
     if (e.type === "leveledUp") audio.sfx("level");
     if (e.type === "equipped") bumpArt();

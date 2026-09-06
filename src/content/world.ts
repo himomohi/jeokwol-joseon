@@ -148,10 +148,11 @@ export const PROPS: Record<string, PropDefinition> = {
 
 export const LOOT_TABLES: Record<string, { w: number; itemId: string; qty: number }[]> = {
   loot_bandit: [
-    { w: 40, itemId: "gold", qty: 6 },
-    { w: 18, itemId: "hp_small", qty: 1 },
-    { w: 8, itemId: "sword_rusty", qty: 1 },
-    { w: 6, itemId: "helm_gat", qty: 1 },
+    { w: 28, itemId: "gold", qty: 6 },
+    { w: 16, itemId: "hp_small", qty: 1 },
+    { w: 16, itemId: "sword_rusty", qty: 1 },
+    { w: 14, itemId: "helm_gat", qty: 1 },
+    { w: 10, itemId: "chest_leather", qty: 1 },
   ],
   loot_bandit_rare: [
     { w: 30, itemId: "gold", qty: 28 },

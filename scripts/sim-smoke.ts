@@ -80,6 +80,14 @@ if (!k1.hit) throw new Error("히트가 없다");
 if (!k1.loot) throw new Error("루트 드롭이 없다");
 if (sim.meta.xp <= 0) throw new Error("경험치가 없다");
 
+const defLoot0 = liveStats(sim).def;
+sim.drops.push({ id: "b-loot", x: sim.player.x, y: sim.player.y, itemId: "chest_scale", qty: 1, age: 0 });
+step(sim, 1 / 120);
+if (sim.drops.some((d) => d.id === "b-loot")) handleCommand(sim, { type: "pickupNearest" });
+if (liveStats(sim).def <= defLoot0) throw new Error("루트 장착 스탯이 안 올랐다");
+if (visFrom(sim.meta, sim.player).armorKind !== "armor") throw new Error("루트 장착 실루엣이 안 바뀌었다");
+console.log("B loop loot→equip def", defLoot0, liveStats(sim).def);
+
 sim.meta.level = Math.max(sim.meta.level, 3);
 sim.meta.gold += 400;
 handleCommand(sim, { type: "buy", itemId: "sword_ring" });

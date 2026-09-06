@@ -4,6 +4,7 @@ import { ITEMS } from "../content/items";
 import { BIOMES, HUBS, NPCS, POI, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
+import { ART_PIPELINE } from "../art/cache";
 import {
   KEY_LIGHT_DIR,
   LOCKED_16,
@@ -60,6 +61,7 @@ export function reviewContent(): ReviewReport {
   if (POI.banditBoss?.boss !== "boss_bandit") notes.push("산적두목 POI 없음");
   const missingSkills = Object.values(JOBS).flatMap((j) => j.skills).filter((id) => !SKILLS[id]);
   if (missingSkills.length) notes.push(`없는 초식 ${missingSkills.length}`);
+  if (ART_PIPELINE !== "codegen") notes.push("아트 파이프라인이 codegen이 아님");
   reviewPalette(notes);
   return {
     jobs: jobs.length,

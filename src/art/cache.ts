@@ -3,6 +3,9 @@ import { iconCanvas } from "./icons";
 const staticCache = new Map<string, HTMLCanvasElement>();
 let gen = 0;
 
+/** World/character art is Canvas path codegen + cache. Not sprite PNGs. */
+export const ART_PIPELINE = "codegen" as const;
+
 export function bumpArt(): void {
   gen += 1;
   staticCache.clear();

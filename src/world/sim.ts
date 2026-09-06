@@ -233,8 +233,10 @@ function addItem(sim: Sim, itemId: string, qty: number): void {
     }
   }
   sim.meta.inventory.push({ instId: `i${++sim.instSeq}`, itemId, qty });
+  const instId = sim.meta.inventory[sim.meta.inventory.length - 1]!.instId;
   emit(sim, { type: "pickedUp", itemId, qty });
   emit(sim, { type: "message", text: `${def.name} ×${qty}`, kind: "loot" });
+  tryAutoEquip(sim, instId);
 }
 
 function makePlayer(name: string, job: BaseJobId): { actor: Actor; meta: PlayerMeta } {
@@ -291,12 +293,6 @@ function giveStarter(sim: Sim): void {
   addItem(sim, STARTER_CHEST, 1);
   addItem(sim, STARTER_BOOTS, 1);
   addItem(sim, "hp_small", 3);
-  const winst = sim.meta.inventory.find((i) => i.itemId === w);
-  const cinst = sim.meta.inventory.find((i) => i.itemId === STARTER_CHEST);
-  const binst = sim.meta.inventory.find((i) => i.itemId === STARTER_BOOTS);
-  if (winst) sim.meta.equip.weapon = winst.instId;
-  if (cinst) sim.meta.equip.chest = cinst.instId;
-  if (binst) sim.meta.equip.boots = binst.instId;
 }
 
 function npcActors(): Actor[] {
@@ -924,6 +920,26 @@ function canEquip(sim: Sim, it: NonNullable<ReturnType<typeof itemById>>): strin
   return null;
 }
 
+function gearScore(it: NonNullable<ReturnType<typeof itemById>>): number {
+  const s = it.stats;
+  return (s.atk ?? 0) * 3 + (s.def ?? 0) * 2 + (s.maxHp ?? 0) * 0.12 + (s.maxMp ?? 0) * 0.08 + (s.spd ?? 0) * 0.15 + (s.crit ?? 0) * 40 + (s.luck ?? 0) * 0.4;
+}
+
+function tryAutoEquip(sim: Sim, instId: string): void {
+  const inst = sim.meta.inventory.find((i) => i.instId === instId);
+  const it = inst ? itemById(inst.itemId) : undefined;
+  if (!it) return;
+  if (it.slot !== "weapon" && it.slot !== "helm" && it.slot !== "chest" && it.slot !== "legs" && it.slot !== "boots" && it.slot !== "accessory") return;
+  if (canEquip(sim, it)) return;
+  const slot = it.slot;
+  const curId = sim.meta.equip[slot];
+  if (curId) {
+    const cur = itemById(sim.meta.inventory.find((i) => i.instId === curId)?.itemId ?? "");
+    if (cur && gearScore(it) <= gearScore(cur) + 0.05) return;
+  }
+  equipInst(sim, instId);
+}
+
 function equipInst(sim: Sim, instId: string): void {
   const inst = sim.meta.inventory.find((i) => i.instId === instId);
   const it = inst ? itemById(inst.itemId) : undefined;
@@ -1456,7 +1472,7 @@ export function step(sim: Sim, dt: number): void {
   sim.drops = sim.drops.filter((d) => d.age < 80);
   if (sim.drops.length) {
     for (const d of [...sim.drops]) {
-      if (dist(sim.player.x, sim.player.y, d.x, d.y) < 22) {
+      if (dist(sim.player.x, sim.player.y, d.x, d.y) < 34) {
         sim.drops = sim.drops.filter((x) => x !== d);
         addItem(sim, d.itemId, d.qty);
       }
