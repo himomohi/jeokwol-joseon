@@ -5,10 +5,8 @@ import { BIOMES, HUBS, NPCS, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
 import {
-  LIFE_INDEX,
   PAL_INDEX,
-  TORCH_INDEX,
-  hexKey,
+  isEnvHex,
   isPaletteHex,
   isPureBlack,
   neighborStroke,
@@ -73,9 +71,25 @@ export function reviewContent(): ReviewReport {
 }
 
 function reviewPalette(notes: string[]): void {
-  if (PAL_INDEX.length !== 16) notes.push("팔레트 16이 아님");
-  const uniq = new Set(PAL_INDEX.map(hexKey));
-  if (uniq.size !== 16) notes.push("팔레트 중복");
+  const locked = [
+    "#0B0A14",
+    "#162033",
+    "#243552",
+    "#3D5278",
+    "#6E6256",
+    "#B5A48C",
+    "#EDE4D4",
+    "#3F0A12",
+    "#8A1220",
+    "#C41E3A",
+    "#F24555",
+    "#8A6414",
+    "#E0A81C",
+    "#F0C86A",
+    "#2F5A48",
+    "#6A7380",
+  ];
+  if (PAL_INDEX.length !== 16 || PAL_INDEX.some((c, i) => c !== locked[i])) notes.push("잠금 16 hex 불일치");
   if (PAL_INDEX.some(isPureBlack)) notes.push("팔레트에 #000");
   if (PAL_INDEX.some((c) => isPureBlack(neighborStroke(c)))) notes.push("아웃라인 #000");
   if (Object.values(MAT).some((m) => isPureBlack(m.fill) || isPureBlack(m.stroke))) notes.push("재료 #000");
@@ -83,11 +97,10 @@ function reviewPalette(notes: string[]): void {
   if (badTint.length) notes.push(`물산 tint 이탈 ${badTint.length}`);
   const badJob = Object.values(JOBS).filter((j) => !isPaletteHex(j.hue) || !isPaletteHex(j.robe));
   if (badJob.length) notes.push(`직 색 이탈 ${badJob.length}`);
-  const hot = new Set([...LIFE_INDEX, ...TORCH_INDEX].map((i) => hexKey(PAL_INDEX[i]!)));
   for (const b of Object.values(BIOMES)) {
     for (const f of [b.grass, b.grass2, b.dirt, b.deco, b.water]) {
       if (!f) continue;
-      if (hot.has(hexKey(f))) notes.push(`환경에 핏/횃불 ${b.id}`);
+      if (!isEnvHex(f)) notes.push(`환경에 핏/횃불 ${b.id}`);
     }
   }
 }
