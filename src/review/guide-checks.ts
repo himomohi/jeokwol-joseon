@@ -1,3 +1,4 @@
+import { ART_PIPELINE, PNG_HINT_ALPHA } from "../art/cache";
 import { drawItemForm, weaponTipOffset } from "../art/forms";
 import { ATTACK_DUR, finite, project3, sampleWeaponTip, solveElbow, solveRig } from "../art/rig";
 import { biomeAt, biomeWeights, groundTint } from "../world/map";
@@ -8,6 +9,7 @@ export function reviewGuide(notes: string[]): void {
   reviewWeaponShare(notes);
   reviewBiomeBlend(notes);
   reviewGroundTint(notes);
+  reviewPngHintLaw(notes);
 }
 
 function near(a: number, b: number, eps: number): boolean {
@@ -73,8 +75,61 @@ function reviewGroundTint(notes: string[]): void {
   if (!t0.startsWith("#")) notes.push("지면 틴트가 hex가 아님");
 }
 
-export function trailSeparated(ids: number[]): boolean {
-  return new Set(ids).size === ids.filter((x, i, a) => a.indexOf(x) === i).length || new Set(ids).size >= 1;
+function reviewPngHintLaw(notes: string[]): void {
+  if (ART_PIPELINE !== "codegen") notes.push("아트 파이프라인이 codegen이 아님");
+  if (PNG_HINT_ALPHA < 0.28 || PNG_HINT_ALPHA > 0.4) {
+    notes.push("PNG 힌트 알파가 교체 수준(0.28–0.4 밖)");
+  }
+}
+
+/**
+ * Source-law: drawEnemy / drawPlayer must paint codegen even when a PNG sheet exists.
+ * PNG may only follow as a low-alpha hint; an if(sheet) early-return / else-skip is forbidden.
+ */
+export function assertCodegenBodyAlwaysOn(actorsSrc: string): string[] {
+  const notes: string[] = [];
+  const enemy = sliceFn(actorsSrc, "export function drawEnemy", "function drawEnemyArt");
+  if (!enemy) notes.push("drawEnemy를 자를 수 없음");
+  else {
+    if (!enemy.includes("cachedStatic") || !enemy.includes("drawEnemyArt")) {
+      notes.push("drawEnemy가 codegen(cachedStatic+drawEnemyArt)을 항상 그리지 않음");
+    }
+    const codegenAt = enemy.indexOf("cachedStatic");
+    const pngAt = enemy.indexOf("pngOverlay");
+    const blitAt = enemy.indexOf("blitPngOverlay");
+    if (pngAt >= 0 && codegenAt >= 0 && pngAt < codegenAt) {
+      notes.push("drawEnemy가 PNG를 codegen보다 먼저 고름");
+    }
+    if (blitAt >= 0 && codegenAt >= 0 && blitAt < codegenAt) {
+      notes.push("drawEnemy가 PNG blit을 codegen보다 먼저 함");
+    }
+    if (/if\s*\(\s*sheet\s*\)\s*\{[\s\S]*?blitPngOverlay[\s\S]*?\}\s*else\s*\{/.test(enemy)) {
+      notes.push("drawEnemy PNG가 codegen을 대체함");
+    }
+  }
+
+  const player = sliceFn(actorsSrc, "export function drawPlayer", "function drawHorse");
+  if (!player) notes.push("drawPlayer를 자를 수 없음");
+  else {
+    if (!player.includes("rigOf(")) notes.push("drawPlayer가 solveRig/codegen 몸을 안 그림");
+    if (/if\s*\(\s*sheet\s*\)\s*\{[\s\S]*?\breturn;/.test(player)) {
+      notes.push("drawPlayer PNG가 리그 codegen을 건너뜀");
+    }
+    const rigAt = player.indexOf("rigOf(");
+    const pngAt = player.indexOf("pngOverlay");
+    if (pngAt >= 0 && rigAt >= 0 && pngAt < rigAt) {
+      notes.push("drawPlayer가 PNG를 리그보다 먼저 고름");
+    }
+  }
+  return notes;
+}
+
+function sliceFn(src: string, start: string, next: string): string | null {
+  const a = src.indexOf(start);
+  if (a < 0) return null;
+  const b = src.indexOf(next, a + start.length);
+  if (b < 0) return null;
+  return src.slice(a, b);
 }
 
 export { finite };

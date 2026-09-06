@@ -10,9 +10,13 @@ let gen = 0;
 
 /**
  * Primary pipeline: joint/form/material codegen → Canvas cache → world blit.
- * PNG under public/sprites/ is an optional overlay for a few PASS-audited units.
+ * PNG under public/sprites/ is an optional EXCEPTION hint overlay for a few
+ * PASS-audited units. It never replaces world sprites or skips codegen.
  */
 export const ART_PIPELINE = "codegen" as const;
+
+/** Hint-only drawImage alpha. Opaque PNG replacement is forbidden. */
+export const PNG_HINT_ALPHA = 0.32;
 
 export interface SnappedSheet {
   canvas: HTMLCanvasElement;
@@ -24,7 +28,7 @@ export interface SnappedSheet {
 
 /**
  * Approved overlay keys → candidate paths (64 / sheet64 first, 32 fallback).
- * Missing files fail soft; codegen stays.
+ * Missing files fail soft. Codegen body is always drawn regardless.
  */
 export const PNG_OVERLAY: Record<string, readonly string[]> = {
   player_musa: ["sprites/musa_64.png", "sprites/musa_32.png"],
@@ -175,7 +179,7 @@ export function pngKeyForJob(jobId: string | undefined): string | null {
   return PLAYER_PNG[jobId] ?? null;
 }
 
-/** Palette-snapped sheet if an audited PNG loaded; otherwise null (codegen stays). */
+/** Palette-snapped sheet if an audited PNG loaded; otherwise null. Codegen still draws. */
 export function pngOverlay(key: string): SnappedSheet | null {
   if (!PNG_OVERLAY[key]) return null;
   kickPng(key);
@@ -188,7 +192,10 @@ export function frameIndex(sheet: SnappedSheet, walkPhase: number, attacking: bo
   return Math.floor(((walkPhase % 1) + 1) % 1 * (sheet.frames - (sheet.frames > 2 ? 1 : 0)));
 }
 
-/** Opaque drawImage overlay. Codegen underneath is the fallback while loading. */
+/**
+ * Low-alpha hint overlay ON TOP of already-drawn codegen.
+ * Never a replacement blit — callers must paint the codegen body first.
+ */
 export function blitPngOverlay(
   ctx: CanvasRenderingContext2D,
   sheet: SnappedSheet,
@@ -199,7 +206,10 @@ export function blitPngOverlay(
   const fi = frameIndex(sheet, walkPhase, attacking);
   const dw = size ?? sheet.frameW;
   const dh = size ?? sheet.frameH;
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = prev * PNG_HINT_ALPHA;
   ctx.drawImage(sheet.canvas, fi * sheet.frameW, 0, sheet.frameW, sheet.frameH, -dw / 2, -dh / 2 - 4, dw, dh);
+  ctx.globalAlpha = prev;
 }
 
 export function preloadApprovedPng(): void {

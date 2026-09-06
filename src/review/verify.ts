@@ -82,6 +82,7 @@ export function reviewContent(): ReviewReport {
   const missingSkills = Object.values(JOBS).flatMap((j) => j.skills).filter((id) => !SKILLS[id]);
   if (missingSkills.length) notes.push(`없는 초식 ${missingSkills.length}`);
   if (ART_PIPELINE !== "codegen") notes.push("아트 파이프라인이 codegen이 아님");
+  // PNG keys are optional hint overlays only; reviewGuide asserts codegen body always on.
   for (const k of ["player_musa", "player_gungsoo", "bandit", "tiger_white", "gumiho_lady"] as const) {
     if (!PNG_OVERLAY[k]?.length) notes.push(`검수 PNG 키 ${k} 없음`);
   }
