@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { reviewContent } from "../src/review/verify";
 import { ATTACK_DUR, project3, sampleWeaponTip, solveElbow, solveRig } from "../src/art/rig";
 import { weaponTipOffset } from "../src/art/forms";
+import { PNG_HINT_ALPHA } from "../src/art/cache";
 import { biomeWeights, groundTint, propForBiome } from "../src/world/map";
 import { createEmptySim, handleCommand, step } from "../src/world/sim";
 import { POI } from "../src/content/world";
 import { fieldMix, tentSiteAllowed } from "../src/world/placement";
+import { assertCodegenBodyAlwaysOn } from "../src/review/guide-checks";
 
 const r = reviewContent();
 if (!r.ok) throw new Error(r.notes.join(", "));
@@ -77,4 +82,31 @@ if (!fieldMix("swamp").some((p) => p.art === "reed") || !fieldMix("swamp").some(
 if (tentSiteAllowed(80, 40)) throw new Error("start plaza allowed a tent");
 if (!tentSiteAllowed(2460, 36)) throw new Error("east-gate tent rejected");
 
-console.log("GUIDE-UNIT OK", { span: span.toFixed(2), attacks: [id1, id2], trailIds: [...ids] });
+if (PNG_HINT_ALPHA < 0.28 || PNG_HINT_ALPHA > 0.4) throw new Error("PNG hint alpha replaces codegen");
+const actorsSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../src/art/actors.ts"), "utf8");
+const pngLaw = assertCodegenBodyAlwaysOn(actorsSrc);
+if (pngLaw.length) throw new Error(pngLaw.join(", "));
+
+const rejected = assertCodegenBodyAlwaysOn(`
+export function drawEnemy(ctx, actor) {
+  const sheet = pngOverlay(art);
+  if (sheet) {
+    blitPngOverlay(ctx, sheet, 0, false, 52);
+  } else {
+    const cached = cachedStatic(\`enemy:\${art}\`, 88, 88, (c) => drawEnemyArt(c, art));
+    ctx.drawImage(cached, -44, -44, 88, 88);
+  }
+}
+function drawEnemyArt() {}
+export function drawPlayer() {
+  const sheet = pngOverlay("player_musa");
+  if (sheet) { blitPngOverlay(ctx, sheet); return; }
+  const rig = rigOf(false, 0, 0, "sword");
+}
+function drawHorse() {}
+`);
+if (!rejected.some((n) => n.includes("대체") || n.includes("먼저") || n.includes("건너"))) {
+  throw new Error("png-law assert missed the rejected if(sheet) skip");
+}
+
+console.log("GUIDE-UNIT OK", { span: span.toFixed(2), attacks: [id1, id2], trailIds: [...ids], pngHint: PNG_HINT_ALPHA });
