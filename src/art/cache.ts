@@ -2,7 +2,8 @@ import { iconCanvas } from "./icons";
 import { nearestPal, parseHex } from "./palette";
 
 const staticCache = new Map<string, HTMLCanvasElement>();
-const pngCache = new Map<string, HTMLCanvasElement | null>();
+const pngCache = new Map<string, SnappedSheet | null>();
+const pngTried = new Set<string>();
 let gen = 0;
 
 /**
@@ -11,14 +12,43 @@ let gen = 0;
  */
 export const ART_PIPELINE = "codegen" as const;
 
-/** Approved Grok CLI pixel sheets — exception overlay only. */
-export const PNG_OVERLAY: Record<string, string> = {
-  player_musa: "sprites/musa_64.png",
-  player_gungsoo: "sprites/gungsa_64.png",
-  player_gungsa: "sprites/gungsa_64.png",
-  bandit_king: "sprites/bandit_64.png",
-  gumiho_lady: "sprites/gumiho_64.png",
-  tiger_white: "sprites/boss_baekho_64.png",
+export interface SnappedSheet {
+  canvas: HTMLCanvasElement;
+  frameW: number;
+  frameH: number;
+  frames: number;
+  src: string;
+}
+
+/**
+ * Approved overlay keys → candidate paths (64 / sheet64 first, 32 fallback).
+ * Missing files fail soft; codegen stays.
+ */
+export const PNG_OVERLAY: Record<string, readonly string[]> = {
+  player_musa: ["sprites/musa_64.png", "sprites/musa_32.png"],
+  player_gungsoo: ["sprites/gungsa_64.png", "sprites/gungsa_32.png"],
+  player_gungsa: ["sprites/gungsa_64.png", "sprites/gungsa_32.png"],
+  bandit: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  bandit_blade: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  bandit_road: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  bandit_smuggler: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  bandit_chief: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  bandit_king: ["sprites/bandit_64.png", "sprites/bandit_32.png"],
+  tiger_white: ["sprites/boss_baekho_sheet64.png", "sprites/boss_baekho_64.png", "sprites/boss_baekho_32.png"],
+  gumiho: ["sprites/gumiho_sheet64.png", "sprites/gumiho_64.png", "sprites/gumiho_32.png"],
+  gumiho_lady: ["sprites/gumiho_sheet64.png", "sprites/gumiho_64.png", "sprites/gumiho_32.png"],
+};
+
+const PLAYER_PNG: Record<string, string> = {
+  musa: "player_musa",
+  geomgaek: "player_musa",
+  changbyeong: "player_musa",
+  gungsoo: "player_gungsoo",
+  gungsa: "player_gungsa",
+  singung: "player_gungsoo",
+  hwasal: "player_gungsoo",
+  baekbal: "player_gungsoo",
+  singijeonsu: "player_gungsoo",
 };
 
 export function bumpArt(): void {
@@ -48,9 +78,11 @@ export function cacheSize(): number {
   return staticCache.size;
 }
 
-function spriteUrl(rel: string): string {
-  const base = typeof import.meta !== "undefined" && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : "/";
-  return `${base}${rel}`.replace(/\/{2,}/g, "/").replace(":/", "://");
+export function spriteUrl(rel: string): string {
+  const base = typeof import.meta !== "undefined" && import.meta.env?.BASE_URL ? String(import.meta.env.BASE_URL) : "/";
+  const prefix = base.endsWith("/") ? base : `${base}/`;
+  const path = rel.replace(/^\//, "");
+  return `${prefix}${path}`;
 }
 
 function snapSheet(src: HTMLCanvasElement): HTMLCanvasElement {
@@ -80,31 +112,74 @@ function snapSheet(src: HTMLCanvasElement): HTMLCanvasElement {
   return out;
 }
 
-function kickPng(key: string): void {
-  if (pngCache.has(key)) return;
-  const rel = PNG_OVERLAY[key];
-  if (!rel || typeof Image === "undefined") {
+function packSheet(snapped: HTMLCanvasElement, src: string): SnappedSheet {
+  const h = snapped.height || 32;
+  const square = h === 32 || h === 64 ? h : 64;
+  const frames = Math.max(1, Math.floor(snapped.width / square));
+  const frameW = frames > 1 ? square : snapped.width;
+  return { canvas: snapped, frameW, frameH: snapped.height, frames, src };
+}
+
+function loadFirst(key: string, paths: readonly string[], i = 0): void {
+  if (i >= paths.length || typeof Image === "undefined") {
     pngCache.set(key, null);
     return;
   }
-  pngCache.set(key, null);
+  const rel = paths[i]!;
   const im = new Image();
   im.onload = () => {
     const raw = document.createElement("canvas");
     raw.width = im.width;
     raw.height = im.height;
     raw.getContext("2d")!.drawImage(im, 0, 0);
-    pngCache.set(key, snapSheet(raw));
+    pngCache.set(key, packSheet(snapSheet(raw), rel));
   };
-  im.onerror = () => pngCache.set(key, null);
+  im.onerror = () => loadFirst(key, paths, i + 1);
   im.src = spriteUrl(rel);
 }
 
-/** Palette-snapped PNG if the audited sheet has loaded; otherwise null (codegen stays). */
-export function pngOverlay(key: string): HTMLCanvasElement | null {
+function kickPng(key: string): void {
+  if (pngTried.has(key)) return;
+  pngTried.add(key);
+  const paths = PNG_OVERLAY[key];
+  if (!paths?.length) {
+    pngCache.set(key, null);
+    return;
+  }
+  pngCache.set(key, null);
+  loadFirst(key, paths, 0);
+}
+
+export function pngKeyForJob(jobId: string | undefined): string | null {
+  if (!jobId) return null;
+  return PLAYER_PNG[jobId] ?? null;
+}
+
+/** Palette-snapped sheet if an audited PNG loaded; otherwise null (codegen stays). */
+export function pngOverlay(key: string): SnappedSheet | null {
   if (!PNG_OVERLAY[key]) return null;
   kickPng(key);
   return pngCache.get(key) ?? null;
+}
+
+export function frameIndex(sheet: SnappedSheet, walkPhase: number, attacking: boolean): number {
+  if (sheet.frames <= 1) return 0;
+  if (attacking) return sheet.frames - 1;
+  return Math.floor(((walkPhase % 1) + 1) % 1 * (sheet.frames - (sheet.frames > 2 ? 1 : 0)));
+}
+
+/** Opaque drawImage overlay. Codegen underneath is the fallback while loading. */
+export function blitPngOverlay(
+  ctx: CanvasRenderingContext2D,
+  sheet: SnappedSheet,
+  walkPhase = 0,
+  attacking = false,
+  size?: number,
+): void {
+  const fi = frameIndex(sheet, walkPhase, attacking);
+  const dw = size ?? sheet.frameW;
+  const dh = size ?? sheet.frameH;
+  ctx.drawImage(sheet.canvas, fi * sheet.frameW, 0, sheet.frameW, sheet.frameH, -dw / 2, -dh / 2 - 4, dw, dh);
 }
 
 export function preloadApprovedPng(): void {

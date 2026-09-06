@@ -6,7 +6,7 @@ import { PAL } from "./palette";
 import { capsule, ellipse, fillStroke, horn, matOf, poly, type Mat } from "./materials";
 import { joint, poseOf } from "./poses";
 import { drawHat, drawWeaponForm } from "./forms";
-import { cachedStatic, pngOverlay } from "./cache";
+import { blitPngOverlay, cachedStatic, pngKeyForJob, pngOverlay } from "./cache";
 
 export interface DrawVis {
   robe: string;
@@ -68,6 +68,14 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
     ctx.drawImage(horse, -28, -4, 56, 40);
   }
 
+  const pngKey = pngKeyForJob(vis.jobId);
+  const sheet = pngKey ? pngOverlay(pngKey) : null;
+  if (sheet) {
+    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, 56);
+    ctx.restore();
+    return;
+  }
+
   const hip = joint(pose, "hip");
   ctx.translate(hip.x, hip.y);
 
@@ -112,14 +120,6 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
   const hatC = cachedStatic(`hat:${vis.hat}`, 40, 36, (c) => drawHat(c, vis.hat, matOf("horsehair")));
   ctx.drawImage(hatC, -20, -20, 40, 36);
   ctx.restore();
-
-  const pngKey = vis.jobId === "gungsoo" || vis.jobId === "gungsa" ? "player_gungsoo" : vis.jobId ? `player_${vis.jobId}` : "";
-  const sheet = pngKey ? pngOverlay(pngKey) : null;
-  if (sheet) {
-    ctx.globalAlpha = 0.55;
-    ctx.drawImage(sheet, -22, -30, 44, 44);
-    ctx.globalAlpha = 1;
-  }
 
   ctx.restore();
 }
@@ -219,14 +219,12 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, actor: Actor): void {
   const g = actor.grade === "sang" ? 1.18 : actor.grade === "jung" ? 1.08 : 1;
   ctx.scale(g, g);
 
-  const cached = cachedStatic(`enemy:${art}`, 88, 88, (c) => drawEnemyArt(c, art));
-  ctx.drawImage(cached, -44, -44, 88, 88);
-
   const sheet = pngOverlay(art);
   if (sheet) {
-    ctx.globalAlpha = 0.62;
-    ctx.drawImage(sheet, -28, -30, 56, 56);
-    ctx.globalAlpha = 1;
+    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, actor.grade === "sang" || art.includes("king") || art.includes("lady") ? 64 : 52);
+  } else {
+    const cached = cachedStatic(`enemy:${art}`, 88, 88, (c) => drawEnemyArt(c, art));
+    ctx.drawImage(cached, -44, -44, 88, 88);
   }
 
   ctx.filter = "none";

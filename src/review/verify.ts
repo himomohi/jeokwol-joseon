@@ -4,7 +4,7 @@ import { ITEMS } from "../content/items";
 import { BIOMES, CATALOG_BIOME_IDS, CATALOG_LOOT_IDS, HUBS, LOOT_TABLES, NPCS, POI, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
-import { ART_PIPELINE } from "../art/cache";
+import { ART_PIPELINE, PNG_OVERLAY } from "../art/cache";
 import {
   KEY_LIGHT_DIR,
   LOCKED_16,
@@ -80,6 +80,9 @@ export function reviewContent(): ReviewReport {
   const missingSkills = Object.values(JOBS).flatMap((j) => j.skills).filter((id) => !SKILLS[id]);
   if (missingSkills.length) notes.push(`없는 초식 ${missingSkills.length}`);
   if (ART_PIPELINE !== "codegen") notes.push("아트 파이프라인이 codegen이 아님");
+  for (const k of ["player_musa", "player_gungsoo", "bandit", "tiger_white", "gumiho_lady"] as const) {
+    if (!PNG_OVERLAY[k]?.length) notes.push(`검수 PNG 키 ${k} 없음`);
+  }
   const alley = ENEMY_BY_ID.alley_ghost;
   const wonhon = ENEMY_BY_ID.wonhon;
   if (!alley || (alley.art === wonhon?.art && alley.hp === wonhon?.hp)) notes.push("골목원혼이 원혼 별칭만");
