@@ -91,6 +91,7 @@ export function reviewContent(): ReviewReport {
   const arts = new Set(ENEMIES.map((e) => e.art));
   if (arts.size < 40) notes.push(`적 아트 키 ${arts.size} < 40`);
   reviewPalette(notes);
+  reviewStartScene(notes);
   return {
     jobs: jobs.length,
     adv: adv.length,
@@ -145,5 +146,23 @@ function reviewPalette(notes: string[]): void {
       if (!isEnvHex(f)) notes.push(`환경에 핏/횃불 ${b.id}`);
     }
   }
+  if (BIOMES.hanyang.grass2 === PAL.env_mid || BIOMES.hanyang.grass2 === PAL.env_cool) {
+    notes.push("한양 grass2가 남색 타일");
+  }
+}
+
+function reviewStartScene(notes: string[]): void {
+  const cache = new TerrainCache(1, 16);
+  const chunks = cache.around(0, 0, 0, 1);
+  const arts = chunks.flatMap((c) => c.props.map((p) => p.def.art));
+  const count = (id: string) => arts.filter((a) => a === id).length;
+  if (!arts.some((a) => a === "house" || a === "shop" || a === "shrine")) notes.push("시작 한옥 없음");
+  if (count("pine") < 3) notes.push(`시작 소나무 ${count("pine")} < 3`);
+  if (count("bamboo") < 2) notes.push(`시작 대나무 ${count("bamboo")} < 2`);
+  if (count("tent") > count("pine")) notes.push("시작이 텐트 스팸");
+  const near = chunks.flatMap((c) => c.props).filter((p) => Math.hypot(p.x, p.y) < 220);
+  if (!near.some((p) => p.def.art === "pine")) notes.push("시작 화면 안에 소나무 없음");
+  if (!near.some((p) => p.def.art === "bamboo")) notes.push("시작 화면 안에 대나무 없음");
+  if (!near.some((p) => p.def.roof || p.def.art === "house")) notes.push("시작 화면 안에 한옥 없음");
 }
 

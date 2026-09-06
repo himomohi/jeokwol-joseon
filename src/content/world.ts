@@ -21,7 +21,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     id: "hanyang",
     name: "근교 들녘",
     grass: PAL.moss_cool,
-    grass2: PAL.env_mid,
+    grass2: PAL.earth_dark,
     dirt: PAL.earth_dark,
     deco: PAL.moss_cool,
     ambient: PAL.earth_mid,
@@ -45,7 +45,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     id: "bamboo",
     name: "대나무숲",
     grass: PAL.moss_cool,
-    grass2: PAL.env_mid,
+    grass2: PAL.earth_dark,
     dirt: PAL.earth_dark,
     deco: PAL.moss_cool,
     ambient: PAL.moss_cool,
@@ -228,8 +228,8 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
 };
 
 export const PROPS: Record<string, PropDefinition> = {
-  pine: { id: "pine", name: "소나무", biomes: ["hanyang", "mountain", "snow"], w: 28, h: 48, radius: 10, solid: true, roof: false, layer: "prop", art: "pine" },
-  bamboo: { id: "bamboo", name: "대나무", biomes: ["bamboo", "riverside"], w: 14, h: 56, radius: 6, solid: true, roof: false, layer: "prop", art: "bamboo" },
+  pine: { id: "pine", name: "소나무", biomes: ["hanyang", "village", "mountain", "snow"], w: 36, h: 64, radius: 12, solid: true, roof: false, layer: "prop", art: "pine" },
+  bamboo: { id: "bamboo", name: "대나무", biomes: ["bamboo", "riverside", "hanyang", "village"], w: 18, h: 64, radius: 7, solid: true, roof: false, layer: "prop", art: "bamboo" },
   deadtree: { id: "deadtree", name: "고목", biomes: ["haunted", "swamp"], w: 26, h: 44, radius: 10, solid: true, roof: false, layer: "prop", art: "deadtree" },
   rock: { id: "rock", name: "바위", biomes: ["mountain", "snow", "riverside"], w: 22, h: 18, radius: 12, solid: true, roof: false, layer: "prop", art: "rock" },
   reed: { id: "reed", name: "갈대", biomes: ["riverside", "swamp"], w: 16, h: 28, radius: 4, solid: false, roof: false, layer: "prop", art: "reed" },
@@ -237,11 +237,11 @@ export const PROPS: Record<string, PropDefinition> = {
   lantern: { id: "lantern", name: "석등", biomes: ["village", "haunted"], w: 14, h: 26, radius: 6, solid: true, roof: false, layer: "prop", art: "lantern" },
   campfire: { id: "campfire", name: "모닥불", biomes: ["mountain", "road"], w: 18, h: 16, radius: 8, solid: false, roof: false, layer: "prop", art: "campfire" },
   grave: { id: "grave", name: "무덤", biomes: ["haunted"], w: 16, h: 22, radius: 8, solid: true, roof: false, layer: "prop", art: "grave" },
-  house: { id: "house", name: "초가", biomes: ["village"], w: 86, h: 70, radius: 40, solid: true, roof: true, layer: "prop", art: "house" },
-  shop: { id: "shop", name: "전방", biomes: ["village"], w: 90, h: 74, radius: 42, solid: true, roof: true, layer: "prop", art: "shop" },
-  shrine: { id: "shrine", name: "사당", biomes: ["village", "haunted"], w: 70, h: 64, radius: 32, solid: true, roof: true, layer: "prop", art: "shrine" },
-  gate: { id: "gate", name: "문루", biomes: ["village"], w: 100, h: 40, radius: 20, solid: true, roof: true, layer: "prop", art: "gate" },
-  tent: { id: "tent", name: "군막", biomes: ["road", "hanyang"], w: 48, h: 36, radius: 20, solid: true, roof: false, layer: "prop", art: "tent" },
+  house: { id: "house", name: "초가", biomes: ["village"], w: 120, h: 96, radius: 40, solid: true, roof: true, layer: "prop", art: "house" },
+  shop: { id: "shop", name: "전방", biomes: ["village"], w: 124, h: 100, radius: 42, solid: true, roof: true, layer: "prop", art: "shop" },
+  shrine: { id: "shrine", name: "사당", biomes: ["village", "haunted"], w: 100, h: 88, radius: 32, solid: true, roof: true, layer: "prop", art: "shrine" },
+  gate: { id: "gate", name: "문루", biomes: ["village"], w: 130, h: 72, radius: 20, solid: true, roof: true, layer: "prop", art: "gate" },
+  tent: { id: "tent", name: "군막", biomes: ["road"], w: 52, h: 40, radius: 20, solid: true, roof: false, layer: "prop", art: "tent" },
   wall: { id: "wall", name: "돌담", biomes: ["road", "mountain", "village"], w: 44, h: 22, radius: 16, solid: true, roof: false, layer: "prop", art: "wall" },
 };
 

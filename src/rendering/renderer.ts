@@ -4,7 +4,7 @@ import { clamp, lerp } from "../core/math";
 import type { Sim } from "../world/sim";
 import { interpActor } from "../world/sim";
 import { drawEnemy, drawNpc, drawPlayer, drawShadow, visFrom } from "../art/actors";
-import { drawChunkGround, drawProp, drawRoof } from "../art/worldArt";
+import { drawChunkGround, drawProp } from "../art/worldArt";
 import { groundDropCanvas } from "../art/cache";
 import { ParticlePool } from "./particles";
 import { drawLighting, type Light } from "./lighting";
@@ -43,7 +43,7 @@ export class Renderer {
     this.cam.w = w;
     this.cam.h = h;
     this.narrow = cssW < 720;
-    this.cam.zoom = this.narrow ? 1.15 : 1.48;
+    this.cam.zoom = this.narrow ? 1.2 : 1.38;
   }
 
   follow(x: number, y: number, dt: number): void {
@@ -68,14 +68,15 @@ export class Renderer {
     ctx.scale(this.cam.zoom, this.cam.zoom);
     ctx.translate(-this.cam.x, -this.cam.y);
 
-    const chunks = sim.terrain.around(sim.player.x, sim.player.y, sim.time, 2);
+    const viewR = Math.max(this.cam.w, this.cam.h) / this.cam.zoom + 180;
+    const chunks = sim.terrain.around(sim.player.x, sim.player.y, sim.time, 1);
     for (const c of chunks) drawChunkGround(ctx, c, sim.seed);
 
     const drawables: { y: number; z: number; draw: () => void }[] = [];
 
     for (const c of chunks) {
       for (const pr of c.props) {
-        if (pr.def.roof) continue;
+        if (Math.abs(pr.x - this.cam.x) > viewR || Math.abs(pr.y - this.cam.y) > viewR) continue;
         drawables.push({ y: pr.y, z: 0, draw: () => drawProp(ctx, pr) });
       }
     }
@@ -106,8 +107,11 @@ export class Renderer {
       },
     });
 
+    let drawnActors = 0;
     for (const a of sim.actors) {
       if (a.dead) continue;
+      if (Math.abs(a.x - this.cam.x) > viewR || Math.abs(a.y - this.cam.y) > viewR) continue;
+      if (drawnActors++ > 28) break;
       const ip = interpActor(a, alpha);
       drawables.push({
         y: ip.y,
@@ -187,33 +191,24 @@ export class Renderer {
 
     this.particles.draw(ctx);
 
-    const roofs: { x: number; y: number; w: number; h: number; alpha: number }[] = [];
-    for (const c of chunks) {
-      for (const r of c.roofs) {
-        const inside = p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
-        r.alpha = lerp(r.alpha, inside ? 0.18 : 1, 0.12);
-        roofs.push(r);
-      }
-    }
-    for (const r of roofs) drawRoof(ctx, r.x, r.y, r.w, r.h, r.alpha);
-
     ctx.restore();
 
     const moon = 0.55 + 0.45 * Math.sin(sim.time * 0.04);
     const lights: Light[] = [
-      { x: p.x, y: p.y, r: 160, color: rgba(PAL.torch_warm, 0.26), intensity: 0.62 },
+      { x: p.x, y: p.y, r: 140, color: rgba(PAL.torch_warm, 0.22), intensity: 0.5 },
     ];
     for (const c of chunks) {
       for (const pr of c.props) {
-        if (pr.def.art === "lantern" || pr.def.art === "campfire") {
-          lights.push({
-            x: pr.x,
-            y: pr.y,
-            r: pr.def.art === "campfire" ? 90 : 70,
-            color: rgba(PAL.torch_hot, 0.32),
-            intensity: 0.78,
-          });
-        }
+        if (pr.def.art !== "lantern" && pr.def.art !== "campfire") continue;
+        if (lights.length >= 5) break;
+        if (Math.abs(pr.x - this.cam.x) > viewR || Math.abs(pr.y - this.cam.y) > viewR) continue;
+        lights.push({
+          x: pr.x,
+          y: pr.y,
+          r: pr.def.art === "campfire" ? 70 : 56,
+          color: rgba(PAL.torch_hot, 0.26),
+          intensity: 0.62,
+        });
       }
     }
     drawLighting(ctx, w, h, this.cam.x, this.cam.y, this.cam.zoom, lights, moon);

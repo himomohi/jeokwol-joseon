@@ -56,6 +56,8 @@ export function renderUi(root: HTMLElement, sim: Sim, ui: UiState, extra: { fps:
   hud.hidden = false;
   overlay.innerHTML = "";
   hud.innerHTML = hudHtml(sim, extra);
+  const fpsEl = hud.querySelector("[data-fps]");
+  if (fpsEl) fpsEl.textContent = `${extra.fps.toFixed(0)}fps`;
   bindHud(hud, sim);
 
   if (sim.talk) {
@@ -180,7 +182,7 @@ function hudHtml(sim: Sim, extra: { fps: number; fpsSim: number; post: boolean; 
   </div>
   ${extra.webglLost ? `<div class="narrow-warn">화면 후처리가 끊겼다. 캔버스로 그린다.</div>` : ""}
   <div class="skillbar">${slots}</div>
-  <div class="hint">${hintCore} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 20 ? " · 전직 급수" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
+  <div class="hint">${hintCore} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 20 ? " · 전직 급수" : ""}${extra.post ? "" : " · 후처리 끔"} · <span data-fps>${extra.fps.toFixed(0)}fps</span></div>
   <div class="messages">${sim.messages.slice(-5).map((m) => `<div>${escapeHtml(m.text)}</div>`).join("")}</div>`;
 }
 

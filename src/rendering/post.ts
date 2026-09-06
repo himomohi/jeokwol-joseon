@@ -18,14 +18,9 @@ void main(){
   if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){ gl_FragColor = vec4(u_void,1.0); return; }
   vec3 col = sampleB(uv);
   vec2 px = 1.0/u_res;
-  vec3 blur = vec3(0.0);
-  blur += sampleB(uv+vec2(px.x*2.0,0.0));
+  vec3 blur = sampleB(uv+vec2(px.x*2.0,0.0));
   blur += sampleB(uv-vec2(px.x*2.0,0.0));
-  blur += sampleB(uv+vec2(0.0,px.y*2.0));
-  blur += sampleB(uv-vec2(0.0,px.y*2.0));
-  blur += sampleB(uv+px*2.0);
-  blur += sampleB(uv-px*2.0);
-  blur *= 0.166;
+  blur *= 0.5;
   float lum = dot(col, vec3(0.3,0.5,0.2));
   col += blur * u_bloom * smoothstep(0.45, 0.9, lum);
   float scan = 1.0 - u_crt * 0.08 * sin(uv.y * u_res.y * 3.14159);
@@ -97,7 +92,7 @@ export class PostFx {
     return s;
   }
 
-  apply(src: HTMLCanvasElement, bloom = 0.55, crt = 0.45): boolean {
+  apply(src: HTMLCanvasElement, bloom = 0.32, crt = 0.28): boolean {
     const gl = this.gl;
     if (!gl || this.lost || !this.prog || !this.tex) return false;
     const w = this.dest.width;
