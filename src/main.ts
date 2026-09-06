@@ -36,7 +36,7 @@ bootPrep();
 bindInput(canvas, input);
 
 function resize(): void {
-  renderer.resize(window.innerWidth, window.innerHeight, Math.min(2, window.devicePixelRatio || 1));
+  renderer.resize(window.innerWidth, window.innerHeight, Math.min(1.25, window.devicePixelRatio || 1));
 }
 window.addEventListener("resize", resize);
 resize();

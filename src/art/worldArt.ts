@@ -1,101 +1,154 @@
 import { BIOMES } from "../content/world";
 import type { BiomeId } from "../core/types";
-import { TILE } from "../core/coords";
+import { CHUNK, TILE } from "../core/coords";
 import { STREAM_SALT } from "../core/rng";
+import { biomeAt, type ChunkData, type PropInst } from "../world/map";
 import { randAt } from "../world/noise";
-import type { ChunkData, PropInst } from "../world/map";
-import { PAL, rgba, snapEnv } from "./palette";
 import { cachedStatic } from "./cache";
 import { ellipse, fillStroke, matEnv, poly, roundRect } from "./materials";
+import { PAL, rgba, snapEnv } from "./palette";
 
 function artT(x: number, y: number, seed: number, salt: number): number {
   return randAt(Math.floor(x), Math.floor(y), seed ^ STREAM_SALT.art, salt);
 }
 
+function tuft(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, color: string): void {
+  ctx.strokeStyle = snapEnv(color);
+  ctx.lineWidth = 1.3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - 1.4, y - h);
+  ctx.moveTo(x + 1.6, y);
+  ctx.lineTo(x + 2.2, y - h * 0.75);
+  ctx.moveTo(x - 2.2, y);
+  ctx.lineTo(x - 3, y - h * 0.6);
+  ctx.stroke();
+}
+
+/** Break the 48px tile fill so the grid is not the first thing you see. */
 export function drawTile(ctx: CanvasRenderingContext2D, biome: BiomeId, x: number, y: number, seed: number): void {
   const b = BIOMES[biome];
   const t = artT(x / TILE, y / TILE, seed, 3);
-  ctx.fillStyle = snapEnv(t > 0.5 ? b.grass2 : b.grass);
+  const t2 = artT(x / TILE, y / TILE, seed, 7);
+  const t3 = artT(x / TILE, y / TILE, seed, 13);
+
+  ctx.fillStyle = snapEnv(b.grass);
   ctx.fillRect(x, y, TILE + 1, TILE + 1);
 
   if (biome === "road") {
+    ctx.fillStyle = snapEnv(BIOMES.hanyang.grass);
+    ctx.fillRect(x, y, TILE + 1, 9);
+    ctx.fillRect(x, y + TILE - 9, TILE + 1, 10);
     ctx.fillStyle = snapEnv(b.dirt);
-    ctx.fillRect(x, y + 10, TILE + 1, TILE - 20);
+    const inset = 8 + (t * 3) | 0;
+    ctx.fillRect(x - 1, y + inset, TILE + 3, TILE - inset * 2);
     ctx.fillStyle = snapEnv(PAL.earth_mid);
-    ctx.globalAlpha = 0.35;
-    ctx.fillRect(x, y + 16, TILE + 1, 3);
-    ctx.fillRect(x, y + 28, TILE + 1, 2);
+    ctx.globalAlpha = 0.4;
+    ctx.fillRect(x + t * 10, y + inset + 4, 11, 4);
+    ctx.fillRect(x + 18 + t2 * 16, y + 22, 9, 3);
     ctx.globalAlpha = 1;
-    if (t > 0.72) {
-      ctx.fillStyle = snapEnv(PAL.env_mid);
-      ctx.fillRect(x + 8 + t * 20, y + 20, 4, 3);
+    tuft(ctx, x + 6 + t * 8, y + 8, 5, BIOMES.hanyang.deco);
+    tuft(ctx, x + 30 + t2 * 8, y + TILE - 6, 5, BIOMES.hanyang.deco);
+    return;
+  }
+
+  ctx.fillStyle = snapEnv(b.grass2);
+  ctx.globalAlpha = 0.55;
+  ctx.fillRect(x + 4 + t * 18, y + 5 + t2 * 16, 9 + t3 * 14, 6 + t * 10);
+  if (t2 > 0.45) ctx.fillRect(x + 22 + t3 * 12, y + 18 + t * 14, 8 + t * 10, 5 + t2 * 8);
+  ctx.globalAlpha = 1;
+
+  if (t > 0.58) {
+    ctx.fillStyle = snapEnv(b.dirt);
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(x + 6 + t2 * 22, y + 8 + t3 * 20, 7 + t * 8, 4 + t2 * 5);
+    ctx.globalAlpha = 1;
+  }
+
+  const tufts = 2 + ((t * 3) | 0);
+  for (let i = 0; i < tufts; i++) {
+    const fx = x + 5 + artT(x / TILE, y / TILE, seed, 20 + i) * (TILE - 10);
+    const fy = y + 8 + artT(x / TILE, y / TILE, seed, 40 + i) * (TILE - 12);
+    tuft(ctx, fx, fy, 4 + t3 * 4, b.deco);
+  }
+
+  if (biome === "village" || biome === "hanyang") {
+    if (t3 > 0.62) {
+      ctx.fillStyle = snapEnv(PAL.earth_mid);
+      ctx.globalAlpha = 0.45;
+      ctx.fillRect(x + t * 20, y + TILE - 10, 14 + t2 * 10, 5);
+      ctx.globalAlpha = 1;
     }
   }
 
   if (biome === "riverside" || biome === "swamp") {
-    const wet = artT(x / TILE, y / TILE, seed, 11);
-    if (wet > 0.62) {
+    if (t2 > 0.6) {
       ctx.fillStyle = snapEnv(b.water ?? PAL.env_cool);
-      ctx.globalAlpha = biome === "swamp" ? 0.48 : 0.4;
-      ctx.fillRect(x, y + TILE * 0.35, TILE + 1, TILE * 0.65);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = snapEnv(PAL.env_mid);
-      ctx.globalAlpha = 0.35;
-      ctx.beginPath();
-      ctx.moveTo(x, y + TILE * 0.4);
-      ctx.quadraticCurveTo(x + 24, y + TILE * 0.5, x + TILE, y + TILE * 0.38);
-      ctx.stroke();
+      ctx.globalAlpha = biome === "swamp" ? 0.46 : 0.38;
+      ctx.fillRect(x, y + TILE * 0.4, TILE + 1, TILE * 0.6);
       ctx.globalAlpha = 1;
     }
   }
 
   if (biome === "snow") {
-    ctx.fillStyle = rgba(PAL.bone_light, 0.22);
-    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.fillStyle = rgba(PAL.bone_light, 0.2);
+    ctx.fillRect(x + t * 8, y + t2 * 8, 16, 10);
   }
 
-  if (biome === "mountain" && t > 0.84) {
-    ctx.fillStyle = snapEnv(PAL.env_mid);
-    ctx.fillRect(x + 12, y + 18, 10, 6);
-  }
-
-  if (biome === "village" || biome === "hanyang") {
-    ctx.strokeStyle = snapEnv(PAL.earth_dark);
-    ctx.globalAlpha = 0.22;
-    ctx.lineWidth = 1;
-    const row = 10 + ((Math.floor(y / TILE) * 3) % 8);
-    ctx.beginPath();
-    ctx.moveTo(x, y + row);
-    ctx.lineTo(x + TILE, y + row + 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    if (t > 0.88) {
-      ctx.fillStyle = snapEnv(PAL.earth_mid);
-      ctx.fillRect(x + 20, y + 22, 6, 3);
+  const east = biomeAt(seed, x + TILE + 4, y + TILE * 0.5);
+  if (east !== biome) {
+    ctx.fillStyle = snapEnv(BIOMES[east].grass);
+    ctx.globalAlpha = 0.4;
+    for (let i = 0; i < 5; i++) {
+      const yy = y + 3 + i * 9 + t * 4;
+      ctx.fillRect(x + TILE - 6 - (i % 2) * 4, yy, 8, 5);
     }
+    ctx.globalAlpha = 1;
   }
 }
 
-export function drawChunkGround(ctx: CanvasRenderingContext2D, chunk: ChunkData, seed: number): void {
-  const ox = chunk.cx * TILE * 16;
-  const oy = chunk.cy * TILE * 16;
+export function ensureChunkGround(chunk: ChunkData, seed: number): HTMLCanvasElement {
+  if (chunk.ground) return chunk.ground;
+  const c = document.createElement("canvas");
+  c.width = CHUNK;
+  c.height = CHUNK;
+  const g = c.getContext("2d")!;
+  const ox = chunk.cx * CHUNK;
+  const oy = chunk.cy * CHUNK;
+  g.save();
+  g.translate(-ox, -oy);
   for (let ty = 0; ty < 16; ty++) {
     for (let tx = 0; tx < 16; tx++) {
       const b = chunk.tiles[ty * 16 + tx]!;
-      drawTile(ctx, b, ox + tx * TILE, oy + ty * TILE, seed);
+      drawTile(g, b, ox + tx * TILE, oy + ty * TILE, seed);
     }
   }
+  g.restore();
+  chunk.ground = c;
+  return c;
+}
+
+export function drawChunkGround(ctx: CanvasRenderingContext2D, chunk: ChunkData, seed: number): void {
+  const g = ensureChunkGround(chunk, seed);
+  ctx.drawImage(g, chunk.cx * CHUNK, chunk.cy * CHUNK);
 }
 
 export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
   ctx.save();
   ctx.translate(p.x, p.y);
   const art = p.def.art;
-  const big = art === "house" || art === "shop" || art === "shrine" || art === "gate" || art === "pine";
-  const sz = big ? 140 : 112;
+  const sz = propSheetSize(art);
   const sheet = cachedStatic(`prop:${art}:${(p.variant * 8) | 0}:${sz}`, sz, sz, (c) => drawPropArt(c, art, p.def.w, p.def.h));
-  ctx.drawImage(sheet, -sz / 2, -sz / 2, sz, sz);
+  ctx.drawImage(sheet, -sz / 2, -sz * 0.62, sz, sz);
   ctx.restore();
+}
+
+function propSheetSize(art: string): number {
+  if (art === "house" || art === "shop" || art === "shrine" || art === "gate") return 220;
+  if (art === "pine" || art === "bamboo") return 200;
+  if (art === "tent") return 168;
+  return 112;
 }
 
 function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
@@ -113,45 +166,57 @@ function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: n
   else if (art === "wall") drawStoneWall(ctx);
 }
 
-function drawPine(ctx: CanvasRenderingContext2D): void {
+/** Brown trunk + stacked green canopy. Sized to read at play zoom. */
+export function drawPine(ctx: CanvasRenderingContext2D): void {
   const wood = matEnv("wood", PAL.earth_dark);
-  poly(ctx, [[-4.5, 16], [-3, -10], [3.2, -10], [5, 16]], wood, 1.3);
+  const bark = matEnv("wood", PAL.earth_mid);
+  poly(ctx, [[-7, 28], [-5, -8], [5.5, -8], [8, 28]], wood, 1.4);
+  poly(ctx, [[-3, 10], [-2, -6], [1.5, -6], [2.2, 12]], bark, 1);
   ctx.strokeStyle = snapEnv(PAL.earth_mid);
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(0, -4);
-  ctx.lineTo(-12, -16);
-  ctx.moveTo(1, -2);
-  ctx.lineTo(13, -14);
+  ctx.moveTo(-2, 4);
+  ctx.lineTo(-16, -8);
+  ctx.moveTo(3, 2);
+  ctx.lineTo(17, -6);
   ctx.stroke();
-  ellipse(ctx, -10, -18, 12, 8, matEnv("jade", PAL.env_mid));
-  ellipse(ctx, 11, -16, 11, 7, matEnv("jade", PAL.moss_cool));
-  ellipse(ctx, 0, -14, 14, 9, matEnv("jade", PAL.moss_cool));
-  ellipse(ctx, -6, -26, 10, 7, matEnv("jade", PAL.env_mid));
-  ellipse(ctx, 6, -28, 10, 7, matEnv("jade", PAL.moss_cool));
-  ellipse(ctx, 1, -34, 8, 6, matEnv("jade", PAL.moss_cool));
+
+  const needle = matEnv("jade", PAL.moss_cool);
+  const needleDeep = matEnv("jade", PAL.moss_cool);
+  ellipse(ctx, -16, -10, 18, 11, needleDeep);
+  ellipse(ctx, 17, -8, 17, 10, needle);
+  ellipse(ctx, 0, -6, 22, 13, needle);
+  ellipse(ctx, -12, -26, 16, 11, needle);
+  ellipse(ctx, 13, -28, 16, 11, needleDeep);
+  ellipse(ctx, 1, -36, 18, 12, needle);
+  ellipse(ctx, -6, -50, 13, 9, needle);
+  ellipse(ctx, 7, -52, 13, 9, needle);
+  ellipse(ctx, 1, -62, 10, 8, needle);
 }
 
-function drawBamboo(ctx: CanvasRenderingContext2D): void {
-  const stalks: [number, number, number][] = [[-4, -34, 3], [2, -38, 3.2], [8, -30, 2.6]];
+export function drawBamboo(ctx: CanvasRenderingContext2D): void {
+  const stalks: [number, number, number][] = [[-8, -58, 4.2], [2, -66, 4.6], [12, -52, 3.6]];
   for (const [x, top, w] of stalks) {
     ctx.strokeStyle = snapEnv(PAL.moss_cool);
     ctx.lineWidth = w;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(x, 10);
-    ctx.lineTo(x + 1, top);
+    ctx.moveTo(x, 22);
+    ctx.lineTo(x + 1.4, top);
     ctx.stroke();
     ctx.strokeStyle = snapEnv(PAL.earth_dark);
-    ctx.lineWidth = 1;
-    for (let y = 6; y > top; y -= 8) {
+    ctx.lineWidth = 1.2;
+    for (let y = 16; y > top; y -= 10) {
       ctx.beginPath();
-      ctx.moveTo(x - 3, y);
-      ctx.lineTo(x + 4, y);
+      ctx.moveTo(x - 4, y);
+      ctx.lineTo(x + 5, y);
       ctx.stroke();
     }
   }
-  ellipse(ctx, -2, -32, 8, 5, matEnv("jade", PAL.moss_cool));
-  ellipse(ctx, 6, -28, 7, 4, matEnv("jade", PAL.env_mid));
+  ellipse(ctx, -10, -50, 12, 7, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 4, -58, 13, 8, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 14, -44, 11, 6, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, -2, -36, 8, 5, matEnv("jade", PAL.moss_cool));
 }
 
 function drawDeadTree(ctx: CanvasRenderingContext2D): void {
@@ -189,15 +254,15 @@ function drawReed(ctx: CanvasRenderingContext2D): void {
 }
 
 function drawBush(ctx: CanvasRenderingContext2D): void {
-  ellipse(ctx, -4, 2, 8, 6, matEnv("jade", PAL.moss_cool));
-  ellipse(ctx, 5, 1, 7, 5, matEnv("jade", PAL.env_mid));
-  ellipse(ctx, 0, -4, 6, 4, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, -4, 2, 10, 7, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 6, 1, 9, 6, matEnv("jade", PAL.moss_cool));
+  ellipse(ctx, 0, -5, 8, 5, matEnv("jade", PAL.moss_cool));
 }
 
 function drawStoneLantern(ctx: CanvasRenderingContext2D): void {
   poly(ctx, [[-5, 10], [-4, 2], [4, 2], [5, 10]], matEnv("stone", PAL.earth_dark), 1.2);
   ctx.shadowColor = PAL.torch_hot;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 8;
   roundRect(ctx, -7, -12, 14, 14, 2);
   ctx.fillStyle = PAL.torch_warm;
   ctx.fill();
@@ -228,63 +293,139 @@ function drawGrave(ctx: CanvasRenderingContext2D): void {
   ctx.fillRect(-3, -6, 6, 2);
 }
 
-function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
-  const bw = Math.min(40, w * 0.42);
-  const bh = Math.min(22, h * 0.28);
-  ctx.fillStyle = snapEnv(PAL.earth_mid);
-  ctx.fillRect(-bw, -4, bw * 2, bh);
-  ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.strokeRect(-bw, -4, bw * 2, bh);
-  ctx.fillStyle = snapEnv(PAL.shadow_navy);
-  for (let i = -bw + 6; i < bw; i += 8) ctx.fillRect(i, -4, 1.4, bh);
+/** Wood walls + door. Roof is the separate opaque giwa pass. */
+export function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
+  const bw = Math.max(38, Math.min(56, w * 0.48));
+  const bh = Math.max(26, Math.min(36, h * 0.42));
+  const wood = matEnv("wood", PAL.earth_mid);
+  const post = matEnv("wood", PAL.earth_dark);
+
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-bw - 4, bh - 4, bw * 2 + 8, 8);
+
+  ctx.fillStyle = wood.fill;
+  ctx.fillRect(-bw, -6, bw * 2, bh);
+  ctx.strokeStyle = post.stroke;
+  ctx.lineWidth = 1.6;
+  ctx.strokeRect(-bw, -6, bw * 2, bh);
+
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-bw, -6, 5, bh);
+  ctx.fillRect(bw - 5, -6, 5, bh);
+  ctx.fillRect(-6, -6, 5, bh);
+  for (let i = -bw + 12; i < bw - 8; i += 11) {
+    ctx.fillStyle = snapEnv(PAL.earth_dark);
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(i, -4, 1.6, bh - 4);
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = snapEnv(PAL.bone_light);
-  ctx.fillRect(-7, 6, 14, 12);
+  ctx.fillRect(-10, 4, 20, bh - 10);
   ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.strokeRect(-7, 6, 14, 12);
+  ctx.strokeRect(-10, 4, 20, bh - 10);
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-1, 8, 2, bh - 16);
+
   if (art === "shop") {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
-    ctx.fillRect(-16, 2, 32, 4);
+    ctx.fillRect(-bw + 8, 0, bw * 2 - 16, 5);
+    ctx.fillStyle = snapEnv(PAL.bone_light);
+    ctx.fillRect(-bw + 12, -2, 10, 6);
   }
   if (art === "shrine") {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
-    ctx.fillRect(-3, -6, 6, 10);
+    ctx.fillRect(-4, -10, 8, 12);
+    ctx.fillStyle = snapEnv(PAL.bone_light);
+    ctx.fillRect(-8, -2, 16, 3);
   }
-  drawHanokRoof(ctx, -bw - 6, -28, bw * 2 + 12, 28);
+  if (art === "gate") {
+    ctx.fillStyle = snapEnv(PAL.earth_dark);
+    ctx.fillRect(-bw, -8, 8, bh + 4);
+    ctx.fillRect(bw - 8, -8, 8, bh + 4);
+  }
+
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-bw - 6, -10, bw * 2 + 12, 6);
 }
 
-function drawHanokRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+/** Solid dark-earth giwa. No stroked umbrella ribs, no ghost alpha stripes. */
+export function drawHanokRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const giwa = matEnv("wood", PAL.earth_dark);
   ctx.beginPath();
-  ctx.moveTo(x, y + h * 0.72);
-  ctx.quadraticCurveTo(x + w * 0.12, y + h * 0.2, x + w * 0.5, y);
-  ctx.quadraticCurveTo(x + w * 0.88, y + h * 0.2, x + w, y + h * 0.72);
-  ctx.lineTo(x + w * 0.92, y + h * 0.78);
-  ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.32, x + w * 0.08, y + h * 0.78);
+  ctx.moveTo(x, y + h * 0.78);
+  ctx.quadraticCurveTo(x + w * 0.18, y + h * 0.12, x + w * 0.5, y + 2);
+  ctx.quadraticCurveTo(x + w * 0.82, y + h * 0.12, x + w, y + h * 0.78);
+  ctx.lineTo(x + w * 0.94, y + h * 0.92);
+  ctx.lineTo(x + w * 0.06, y + h * 0.92);
   ctx.closePath();
-  fillStroke(ctx, matEnv("stone", PAL.earth_dark), 1.3);
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.5, y);
-  ctx.lineTo(x + w * 0.5, y + 4);
-  ctx.strokeStyle = snapEnv(PAL.shadow_navy);
-  ctx.lineWidth = 2.4;
-  ctx.stroke();
-  ctx.strokeStyle = snapEnv(PAL.env_mid);
-  ctx.lineWidth = 0.8;
-  for (let i = 1; i < 5; i++) {
-    const t = i / 5;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.12, y + h * (0.2 + t * 0.5));
-    ctx.quadraticCurveTo(x + w * 0.5, y + h * (0.08 + t * 0.45), x + w * 0.88, y + h * (0.2 + t * 0.5));
-    ctx.stroke();
-  }
+  fillStroke(ctx, giwa, 1.6);
+
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(x + w * 0.08, y + h * 0.34, w * 0.84, h * 0.16);
+  ctx.fillStyle = snapEnv(PAL.shadow_navy);
+  ctx.fillRect(x + w * 0.46, y + 2, w * 0.08, h * 0.42);
+
+  ctx.fillStyle = snapEnv(PAL.earth_mid);
+  ctx.fillRect(x + 2, y + h * 0.86, w - 4, 5);
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(x + w * 0.5 - 5, y, 10, 7);
 }
 
-function drawTent(ctx: CanvasRenderingContext2D): void {
-  poly(ctx, [[-20, 10], [0, -16], [20, 10]], matEnv("cotton", PAL.earth_dark), 1.3);
+export function drawTent(ctx: CanvasRenderingContext2D): void {
+  const canvas = matEnv("cotton", PAL.earth_mid);
+  const shade = matEnv("cotton", PAL.earth_dark);
+
+  ctx.strokeStyle = snapEnv(PAL.earth_dark);
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(0, -16);
-  ctx.lineTo(0, 10);
-  ctx.strokeStyle = snapEnv(PAL.shadow_navy);
+  ctx.moveTo(-28, 18);
+  ctx.lineTo(-22, 8);
+  ctx.moveTo(28, 18);
+  ctx.lineTo(22, 8);
+  ctx.moveTo(-8, 20);
+  ctx.lineTo(-4, 10);
+  ctx.moveTo(8, 20);
+  ctx.lineTo(4, 10);
   ctx.stroke();
+
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-30, 16, 4, 5);
+  ctx.fillRect(26, 16, 4, 5);
+  ctx.fillRect(-10, 18, 4, 5);
+  ctx.fillRect(6, 18, 4, 5);
+
+  poly(ctx, [[-24, 10], [0, -22], [-2, 12]], shade, 1.3);
+  poly(ctx, [[2, 12], [0, -22], [24, 10]], canvas, 1.3);
+
+  ctx.strokeStyle = snapEnv(PAL.earth_dark);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-14, 4);
+  ctx.lineTo(-6, -10);
+  ctx.moveTo(14, 4);
+  ctx.lineTo(6, -10);
+  ctx.moveTo(-10, 10);
+  ctx.lineTo(10, 10);
+  ctx.stroke();
+
+  ctx.fillStyle = snapEnv(PAL.shadow_navy);
+  ctx.beginPath();
+  ctx.moveTo(-7, 12);
+  ctx.lineTo(0, -6);
+  ctx.lineTo(7, 12);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = snapEnv(PAL.earth_dark);
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(0, -24);
+  ctx.lineTo(0, 12);
+  ctx.stroke();
+
+  ctx.fillStyle = snapEnv(PAL.earth_mid);
+  ctx.fillRect(-2, -26, 4, 5);
 }
 
 function drawStoneWall(ctx: CanvasRenderingContext2D): void {
@@ -298,9 +439,13 @@ function drawStoneWall(ctx: CanvasRenderingContext2D): void {
 }
 
 export function drawRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, alpha: number): void {
+  if (alpha < 0.08) return;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.translate(x + w * 0.5, y + h * 0.45);
-  drawHanokRoof(ctx, -w * 0.5, -h * 0.55, w, h * 0.7);
+  const key = `roof:${w | 0}x${h | 0}`;
+  const sheet = cachedStatic(key, Math.max(64, w | 0), Math.max(48, h | 0), (c) => {
+    drawHanokRoof(c, -w * 0.5, -h * 0.5, w, h);
+  });
+  ctx.drawImage(sheet, x, y, w, h);
   ctx.restore();
 }

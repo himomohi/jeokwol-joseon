@@ -41,6 +41,7 @@ export interface ChunkData {
   roofs: RoofRect[];
   lastUse: number;
   spawned: boolean;
+  ground?: HTMLCanvasElement;
 }
 
 const poiList = Object.values(POI);
@@ -149,6 +150,23 @@ function villageLayout(seed: number, hub: HubDef): PropInst[] {
     { def: PROPS.lantern!, x: -70, y: 90 },
     { def: PROPS.lantern!, x: 80, y: 90 },
     { def: PROPS.lantern!, x: 20, y: -70 },
+    { def: PROPS.pine!, x: -80, y: -50 },
+    { def: PROPS.pine!, x: 165, y: 40 },
+    { def: PROPS.pine!, x: 180, y: -80 },
+    { def: PROPS.pine!, x: -220, y: -160 },
+    { def: PROPS.pine!, x: 230, y: -140 },
+    { def: PROPS.pine!, x: 250, y: 170 },
+    { def: PROPS.pine!, x: -240, y: 175 },
+    { def: PROPS.pine!, x: 90, y: 220 },
+    { def: PROPS.pine!, x: 320, y: 36 },
+    { def: PROPS.pine!, x: 390, y: -50 },
+    { def: PROPS.pine!, x: 440, y: 70 },
+    { def: PROPS.bamboo!, x: 70, y: 60 },
+    { def: PROPS.bamboo!, x: -130, y: 70 },
+    { def: PROPS.bamboo!, x: 170, y: 150 },
+    { def: PROPS.bamboo!, x: -155, y: 165 },
+    { def: PROPS.bamboo!, x: 55, y: 195 },
+    { def: PROPS.bamboo!, x: 300, y: 110 },
   ]);
 }
 
@@ -187,7 +205,20 @@ function hubLayout(seed: number, hub: HubDef): PropInst[] {
 }
 
 function propForBiome(b: BiomeId): PropDefinition[] {
-  return Object.values(PROPS).filter((p) => p.biomes.includes(b) && !p.roof && p.id !== "house" && p.id !== "shop" && p.id !== "gate");
+  if (b === "hanyang" || b === "village") {
+    return [
+      PROPS.pine!,
+      PROPS.pine!,
+      PROPS.pine!,
+      PROPS.bamboo!,
+      PROPS.bamboo!,
+      PROPS.bush!,
+    ];
+  }
+  if (b === "road") {
+    return [PROPS.wall ?? PROPS.rock!, PROPS.campfire!, PROPS.tent!];
+  }
+  return Object.values(PROPS).filter((p) => p.biomes.includes(b) && !p.roof && p.id !== "house" && p.id !== "shop" && p.id !== "gate" && p.id !== "tent");
 }
 
 export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
@@ -243,7 +274,14 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
       solids.push({ x: p.x, y: p.y, r: p.def.radius, door });
     }
     if (p.def.roof) {
-      roofs.push({ x: p.x - p.def.w * 0.5, y: p.y - p.def.h * 0.7, w: p.def.w, h: p.def.h * 0.85, alpha: 1, art: p.def.art });
+      roofs.push({
+        x: p.x - p.def.w * 0.58,
+        y: p.y - p.def.h * 0.95,
+        w: p.def.w * 1.16,
+        h: p.def.h * 0.78,
+        alpha: 1,
+        art: p.def.art,
+      });
     }
   }
 
