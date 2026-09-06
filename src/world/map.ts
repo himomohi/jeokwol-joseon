@@ -2,8 +2,9 @@ import type { BiomeId } from "../core/types";
 import { CHUNK, CHUNK_TILES, TILE, chunkKey, worldToChunk, worldToTile } from "../core/coords";
 import { BIOMES, HUBS, POI, PROPS, ROAD_EDGES, hubAt, zoneAt, type BiomeDef, type HubDef } from "../content/world";
 import type { PropDefinition } from "../core/types";
-import { dist } from "../core/math";
+import { clamp, dist, smoothstep } from "../core/math";
 import { fbm, randAt } from "./noise";
+import { mixHex, mixWeighted, snapEnv } from "../art/palette";
 
 const BIOME_IDS: BiomeId[] = ["hanyang", "mountain", "bamboo", "riverside", "swamp", "snow", "haunted", "road", "village"];
 
@@ -41,6 +42,7 @@ export interface ChunkData {
   roofs: RoofRect[];
   lastUse: number;
   spawned: boolean;
+  ground?: HTMLCanvasElement;
 }
 
 const poiList = Object.values(POI);
@@ -106,24 +108,70 @@ export function biomeAt(seed: number, x: number, y: number): BiomeId {
   return "hanyang";
 }
 
-export function biomeBlend(seed: number, x: number, y: number): { id: BiomeId; w: number }[] {
-  const here = biomeAt(seed, x, y);
-  const samples: BiomeId[] = [here];
-  const d = 22;
-  samples.push(biomeAt(seed, x + d, y), biomeAt(seed, x - d, y), biomeAt(seed, x, y + d), biomeAt(seed, x, y - d));
-  const counts = new Map<BiomeId, number>();
-  for (const s of samples) counts.set(s, (counts.get(s) ?? 0) + 1);
+const BLEND_RING: ReadonlyArray<readonly [number, number, number]> = [
+  [0, 0, 1.8],
+  [12, 0, 1.15],
+  [-12, 0, 1.15],
+  [0, 12, 1.15],
+  [0, -12, 1.15],
+  [20, 20, 0.72],
+  [20, -20, 0.72],
+  [-20, 20, 0.72],
+  [-20, -20, 0.72],
+  [34, 0, 0.42],
+  [-34, 0, 0.42],
+  [0, 34, 0.42],
+  [0, -34, 0.42],
+  [46, 18, 0.26],
+  [-46, -18, 0.26],
+  [18, 46, 0.26],
+  [-18, -46, 0.26],
+];
+
+/** Soft inverse-distance weights. Gameplay still uses discrete biomeAt. */
+export function biomeWeights(seed: number, x: number, y: number): { id: BiomeId; w: number }[] {
+  const acc = new Map<BiomeId, number>();
+  for (const [dx, dy, w] of BLEND_RING) {
+    const id = biomeAt(seed, x + dx, y + dy);
+    acc.set(id, (acc.get(id) ?? 0) + w);
+  }
+  let sum = 0;
+  for (const v of acc.values()) sum += v;
+  if (sum <= 1e-8) return [{ id: biomeAt(seed, x, y), w: 1 }];
   const out: { id: BiomeId; w: number }[] = [];
-  for (const [id, n] of counts) out.push({ id, w: n / samples.length });
+  for (const [id, n] of acc) out.push({ id, w: n / sum });
   out.sort((a, b) => b.w - a.w);
   return out;
 }
 
+export function biomeBlend(seed: number, x: number, y: number): { id: BiomeId; w: number }[] {
+  return biomeWeights(seed, x, y);
+}
+
+export function groundTint(seed: number, x: number, y: number): string {
+  const blend = biomeWeights(seed, x, y);
+  const grass = mixWeighted(blend.map((b) => ({ hex: BIOMES[b.id]!.grass, w: b.w })));
+  const grass2 = mixWeighted(blend.map((b) => ({ hex: BIOMES[b.id]!.grass2, w: b.w })));
+  const n = 0.5 + 0.46 * fbm(x / 86, y / 86, seed + 3, 4);
+  let hex = mixHex(grass, grass2, clamp(n, 0, 1));
+  const road = distToRoad(x, y);
+  if (road < 32) hex = mixHex(hex, BIOMES.road.dirt, smoothstep((26 - road) / 18));
+  let wet = 0;
+  let water = BIOMES.riverside.water ?? BIOMES.riverside.grass2;
+  for (const b of blend) {
+    if (b.id === "riverside" || b.id === "swamp") {
+      wet += b.w;
+      if (BIOMES[b.id]!.water) water = BIOMES[b.id]!.water!;
+    }
+  }
+  if (wet > 0.2) hex = mixHex(hex, water, wet * 0.38);
+  const snow = blend.find((b) => b.id === "snow");
+  if (snow && snow.w > 0.18) hex = mixHex(hex, BIOMES.snow.grass2, snow.w * 0.45);
+  return snapEnv(hex);
+}
+
 export function biomeColor(seed: number, x: number, y: number): string {
-  const blend = biomeBlend(seed, x, y);
-  const a = BIOMES[blend[0]!.id];
-  const r = randAt(worldToTile(x), worldToTile(y), seed, 3);
-  return r > 0.55 ? a.grass2 : a.grass;
+  return groundTint(seed, x, y);
 }
 
 function pushPlaced(seed: number, prefix: string, ox: number, oy: number, placed: { def: PropDefinition; x: number; y: number }[]): PropInst[] {
@@ -149,6 +197,23 @@ function villageLayout(seed: number, hub: HubDef): PropInst[] {
     { def: PROPS.lantern!, x: -70, y: 90 },
     { def: PROPS.lantern!, x: 80, y: 90 },
     { def: PROPS.lantern!, x: 20, y: -70 },
+    { def: PROPS.pine!, x: -80, y: -50 },
+    { def: PROPS.pine!, x: 165, y: 40 },
+    { def: PROPS.pine!, x: 180, y: -80 },
+    { def: PROPS.pine!, x: -220, y: -160 },
+    { def: PROPS.pine!, x: 230, y: -140 },
+    { def: PROPS.pine!, x: 250, y: 170 },
+    { def: PROPS.pine!, x: -240, y: 175 },
+    { def: PROPS.pine!, x: 90, y: 220 },
+    { def: PROPS.pine!, x: 320, y: 36 },
+    { def: PROPS.pine!, x: 390, y: -50 },
+    { def: PROPS.pine!, x: 440, y: 70 },
+    { def: PROPS.bamboo!, x: 70, y: 60 },
+    { def: PROPS.bamboo!, x: -130, y: 70 },
+    { def: PROPS.bamboo!, x: 170, y: 150 },
+    { def: PROPS.bamboo!, x: -155, y: 165 },
+    { def: PROPS.bamboo!, x: 55, y: 195 },
+    { def: PROPS.bamboo!, x: 300, y: 110 },
   ]);
 }
 
@@ -187,7 +252,20 @@ function hubLayout(seed: number, hub: HubDef): PropInst[] {
 }
 
 function propForBiome(b: BiomeId): PropDefinition[] {
-  return Object.values(PROPS).filter((p) => p.biomes.includes(b) && !p.roof && p.id !== "house" && p.id !== "shop" && p.id !== "gate");
+  if (b === "hanyang" || b === "village") {
+    return [
+      PROPS.pine!,
+      PROPS.pine!,
+      PROPS.pine!,
+      PROPS.bamboo!,
+      PROPS.bamboo!,
+      PROPS.bush!,
+    ];
+  }
+  if (b === "road") {
+    return [PROPS.wall ?? PROPS.rock!, PROPS.campfire!, PROPS.tent!];
+  }
+  return Object.values(PROPS).filter((p) => p.biomes.includes(b) && !p.roof && p.id !== "house" && p.id !== "shop" && p.id !== "gate" && p.id !== "tent");
 }
 
 export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
@@ -243,7 +321,14 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
       solids.push({ x: p.x, y: p.y, r: p.def.radius, door });
     }
     if (p.def.roof) {
-      roofs.push({ x: p.x - p.def.w * 0.5, y: p.y - p.def.h * 0.7, w: p.def.w, h: p.def.h * 0.85, alpha: 1, art: p.def.art });
+      roofs.push({
+        x: p.x - p.def.w * 0.58,
+        y: p.y - p.def.h * 0.95,
+        w: p.def.w * 1.16,
+        h: p.def.h * 0.78,
+        alpha: 1,
+        art: p.def.art,
+      });
     }
   }
 

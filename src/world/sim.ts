@@ -20,6 +20,8 @@ import { addStats } from "../content/jobs";
 import { TerrainCache, biomeAt, distToRoad, type ChunkData, type Solid } from "./map";
 import { pushOut } from "./collision";
 import { loadSlot, saveSlot } from "../persistence/save";
+import { ATTACK_DUR, finite, lerpVec2, sampleWeaponTip } from "../art/rig";
+import { weaponFormOf } from "../art/forms";
 
 export interface Actor {
   id: string;
@@ -53,6 +55,10 @@ export interface Actor {
   aiTy: number;
   attackCd: number;
   npcId?: string;
+  attackId: number;
+  lastTipX: number;
+  lastTipY: number;
+  hasLastTip: boolean;
 }
 
 export interface Proj {
@@ -166,7 +172,8 @@ export interface Sim {
   bursts: ParticleBurst[];
   postOn: boolean;
   saveHint?: string;
-  trails: { x: number; y: number; a: number }[];
+  trails: { attackId: number; x: number; y: number; a: number }[];
+  nextAttackId: number;
   instSeq: number;
 }
 
@@ -283,6 +290,10 @@ function makePlayer(name: string, job: BaseJobId): { actor: Actor; meta: PlayerM
     aiTx: 0,
     aiTy: 0,
     attackCd: 0,
+    attackId: 0,
+    lastTipX: 0,
+    lastTipY: 0,
+    hasLastTip: false,
   };
   return { actor, meta };
 }
@@ -326,6 +337,10 @@ function npcActors(): Actor[] {
     aiTy: n.y,
     attackCd: 0,
     npcId: n.id,
+    attackId: 0,
+    lastTipX: 0,
+    lastTipY: 0,
+    hasLastTip: false,
   }));
 }
 
@@ -363,6 +378,7 @@ export function createEmptySim(): Sim {
     bursts: [],
     postOn: true,
     trails: [],
+    nextAttackId: 1,
     instSeq: 1,
   };
 }
@@ -589,6 +605,10 @@ function makeEnemy(sim: Sim, def: EnemyDef, grade: Grade, x: number, y: number, 
     aiTx: x,
     aiTy: y,
     attackCd: 0,
+    attackId: 0,
+    lastTipX: 0,
+    lastTipY: 0,
+    hasLastTip: false,
   };
 }
 
@@ -765,14 +785,13 @@ function execSkill(sim: Sim, actor: Actor, skill: SkillDef): void {
   const atk = actor.kind === "player" ? st.atk : (st.atk as number);
   const crit = actor.kind === "player" ? (st as Stats).crit : 0.05;
   actor.facing = angTo(actor.x, actor.y, sim.aimX, sim.aimY);
-  actor.attackAnim = 0.2;
+  beginAttack(sim, actor);
   sim.bursts.push({ x: actor.x, y: actor.y, kind: "skill", t: sim.time, ang: actor.facing });
   emit(sim, { type: "skillUsed", skillId: skill.id });
 
   switch (skill.kind) {
     case "slash":
       hitArc(sim, actor, skill, skill.power, atk, crit);
-      pushTrail(sim, actor, skill.range);
       break;
     case "dash": {
       const d = skill.dist ?? 120;
@@ -883,11 +902,59 @@ function spawnProj(sim: Sim, actor: Actor, skill: SkillDef, atk: number, crit: n
   });
 }
 
-function pushTrail(sim: Sim, actor: Actor, range: number): void {
-  const n = 6;
-  for (let i = 0; i < n; i++) {
-    const a = actor.facing - 0.7 + (i / (n - 1)) * 1.4;
-    sim.trails.push({ x: actor.x + Math.cos(a) * (range * 0.7), y: actor.y + Math.sin(a) * (range * 0.7), a: 1 });
+function weaponFormOfActor(sim: Sim, actor: Actor): string {
+  if (actor.kind !== "player") return "sword";
+  const inst = sim.meta.equip.weapon ? sim.meta.inventory.find((i) => i.instId === sim.meta.equip.weapon) : undefined;
+  const w = inst ? itemById(inst.itemId) : undefined;
+  if (w?.visual?.form) return w.visual.form;
+  return weaponFormOf(JOBS[sim.meta.job]!.weapon);
+}
+
+function beginAttack(sim: Sim, actor: Actor): void {
+  sim.nextAttackId += 1;
+  actor.attackId = sim.nextAttackId;
+  actor.attackAnim = ATTACK_DUR;
+  actor.hasLastTip = false;
+  const form = weaponFormOfActor(sim, actor);
+  const moving = Math.hypot(actor.vx, actor.vy) > 8;
+  let prev = sampleWeaponTip(actor.x, actor.y, actor.facing, moving, actor.walkPhase, 0, form);
+  sim.trails.push({ attackId: actor.attackId, x: finite(prev.x), y: finite(prev.y), a: 1 });
+  for (let i = 1; i <= 5; i++) {
+    const t = (i / 5) * 0.12;
+    const tip = sampleWeaponTip(actor.x, actor.y, actor.facing, moving, actor.walkPhase, t, form);
+    const mid = lerpVec2(prev, tip, 0.5);
+    sim.trails.push({ attackId: actor.attackId, x: finite(mid.x), y: finite(mid.y), a: 1 });
+    sim.trails.push({ attackId: actor.attackId, x: finite(tip.x), y: finite(tip.y), a: 1 });
+    prev = tip;
+  }
+  actor.lastTipX = prev.x;
+  actor.lastTipY = prev.y;
+  actor.hasLastTip = true;
+}
+
+function sampleActiveTrails(sim: Sim): void {
+  for (const actor of [sim.player, ...sim.actors]) {
+    if (actor.attackAnim <= 0 || !actor.attackId) continue;
+    const form = weaponFormOfActor(sim, actor);
+    const moving = Math.hypot(actor.vx, actor.vy) > 8;
+    const t = clamp(1 - actor.attackAnim / ATTACK_DUR, 0, 1);
+    const tip = sampleWeaponTip(actor.x, actor.y, actor.facing, moving, actor.walkPhase, t, form);
+    if (actor.hasLastTip) {
+      for (let i = 1; i <= 3; i++) {
+        const u = i / 3;
+        sim.trails.push({
+          attackId: actor.attackId,
+          x: finite(actor.lastTipX + (tip.x - actor.lastTipX) * u),
+          y: finite(actor.lastTipY + (tip.y - actor.lastTipY) * u),
+          a: 1,
+        });
+      }
+    } else {
+      sim.trails.push({ attackId: actor.attackId, x: finite(tip.x), y: finite(tip.y), a: 1 });
+    }
+    actor.lastTipX = tip.x;
+    actor.lastTipY = tip.y;
+    actor.hasLastTip = true;
   }
 }
 
@@ -1283,7 +1350,7 @@ function tickAi(sim: Sim, a: Actor, dt: number): void {
     steer(a, p.x, p.y, def.spd * 0.8, dt);
     if (d < def.attackRange && a.attackCd <= 0) {
       a.attackCd = def.attackCd + 0.4;
-      a.attackAnim = 0.3;
+      beginAttack(sim, a);
       for (const t of targets(sim, a)) {
         if (dist(a.x, a.y, t.x, t.y) < 54) applyHit(sim, a, t, def.atk, 1.3, 0.05);
       }
@@ -1305,7 +1372,7 @@ function tickAi(sim: Sim, a: Actor, dt: number): void {
   }
   if (d < def.attackRange && a.attackCd <= 0) {
     a.attackCd = def.attackCd;
-    a.attackAnim = 0.2;
+    beginAttack(sim, a);
     applyHit(sim, a, p, def.atk, 1, 0.04);
   }
 }
@@ -1501,6 +1568,7 @@ export function step(sim: Sim, dt: number): void {
     return Math.abs(dx) <= 3 && Math.abs(dy) <= 3;
   });
 
+  sampleActiveTrails(sim);
   for (const t of sim.trails) t.a -= dt * 3;
   sim.trails = sim.trails.filter((t) => t.a > 0);
   sim.bursts = sim.bursts.filter((b) => sim.time - b.t < 0.6);

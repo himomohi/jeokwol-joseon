@@ -18,21 +18,21 @@ export function drawLighting(
   lights: Light[],
   moon: number,
 ): void {
-  const night = 0.12 + moon * 0.07;
+  const night = 0.08 + moon * 0.05;
   ctx.save();
   ctx.globalCompositeOperation = "multiply";
   ctx.fillStyle = rgba(PAL.shadow_navy, night);
   ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = "lighter";
   const nw: Light = {
-    x: camX + KEY_LIGHT_DIR.x * 340,
-    y: camY + KEY_LIGHT_DIR.y * 340,
-    r: 980,
-    color: rgba(PAL.torch_warm, 0.16),
-    intensity: 0.42,
+    x: camX + KEY_LIGHT_DIR.x * 220,
+    y: camY + KEY_LIGHT_DIR.y * 220,
+    r: 620,
+    color: rgba(PAL.torch_warm, 0.12),
+    intensity: 0.32,
   };
   const all = [nw, ...lights];
-  const budget = 18;
+  const budget = 6;
   let i = 0;
   for (const L of all) {
     if (i++ >= budget) break;

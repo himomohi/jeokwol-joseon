@@ -117,6 +117,44 @@ export function rgba(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+export function mixRgb(a: string, b: string, t: number): Rgb {
+  const A = parseHex(a);
+  const B = parseHex(b);
+  const u = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0;
+  return {
+    r: A.r + (B.r - A.r) * u,
+    g: A.g + (B.g - A.g) * u,
+    b: A.b + (B.b - A.b) * u,
+  };
+}
+
+export function rgbToHex(c: Rgb): string {
+  const h = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+}
+
+export function mixHex(a: string, b: string, t: number): string {
+  return rgbToHex(mixRgb(a, b, t));
+}
+
+export function mixWeighted(parts: ReadonlyArray<{ hex: string; w: number }>): string {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let wsum = 0;
+  for (const p of parts) {
+    const w = Number.isFinite(p.w) && p.w > 0 ? p.w : 0;
+    if (!w) continue;
+    const c = parseHex(p.hex);
+    r += c.r * w;
+    g += c.g * w;
+    b += c.b * w;
+    wsum += w;
+  }
+  if (wsum <= 1e-8) return PAL.env_mid;
+  return rgbToHex({ r: r / wsum, g: g / wsum, b: b / wsum });
+}
+
 export function nearestPal(hex: string, set: number[] = PAL_INDEX.map((_, i) => i)): string {
   let best = PAL_INDEX[set[0] ?? 0]!;
   let bd = Infinity;

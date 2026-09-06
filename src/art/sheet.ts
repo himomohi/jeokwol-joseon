@@ -2,6 +2,8 @@ import { drawEnemy, drawPlayer, type DrawVis } from "./actors";
 import { PAL } from "./palette";
 import { preloadApprovedPng } from "./cache";
 import type { Actor } from "../world/sim";
+import { drawBamboo, drawHanok, drawHanokRoof, drawPine, drawTent, drawTile } from "./worldArt";
+import { PROPS } from "../content/world";
 
 function dummy(art: string, facing = -Math.PI / 2): Actor {
   return {
@@ -34,6 +36,10 @@ function dummy(art: string, facing = -Math.PI / 2): Actor {
     aiTx: 0,
     aiTy: 0,
     attackCd: 0,
+    attackId: 0,
+    lastTipX: 0,
+    lastTipY: 0,
+    hasLastTip: false,
   };
 }
 
@@ -76,4 +82,53 @@ export function paintJoseonSheet(canvas: HTMLCanvasElement): void {
     ctx.fillStyle = PAL.bone_light;
     ctx.fillText(row.label, x, Math.floor(i / cols) * cell + cell - 8);
   });
+}
+
+export function paintWorldQa(canvas: HTMLCanvasElement): void {
+  canvas.width = 1100;
+  canvas.height = 640;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = PAL.bg_void;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "13px serif";
+  ctx.fillStyle = PAL.bone_light;
+
+  ctx.fillText("ground village / hanyang / road", 16, 18);
+  for (let i = 0; i < 8; i++) {
+    drawTile(ctx, "village", 16 + i * 48, 28, 1);
+    drawTile(ctx, "hanyang", 16 + i * 48, 80, 1);
+    drawTile(ctx, "road", 16 + i * 48, 132, 1);
+  }
+
+  ctx.fillText("tent", 420, 18);
+  ctx.save();
+  ctx.translate(500, 90);
+  drawTent(ctx);
+  ctx.restore();
+
+  ctx.fillText("hanok + roof", 620, 18);
+  ctx.save();
+  ctx.translate(720, 110);
+  drawHanok(ctx, "house", PROPS.house.w, PROPS.house.h);
+  drawHanokRoof(ctx, -70, -72, 140, 70);
+  ctx.restore();
+
+  ctx.fillText("pine", 16, 210);
+  ctx.save();
+  ctx.translate(90, 320);
+  drawPine(ctx);
+  ctx.restore();
+
+  ctx.fillText("bamboo", 200, 210);
+  ctx.save();
+  ctx.translate(270, 320);
+  drawBamboo(ctx);
+  ctx.restore();
+
+  ctx.fillText("shop", 400, 210);
+  ctx.save();
+  ctx.translate(500, 300);
+  drawHanok(ctx, "shop", PROPS.shop.w, PROPS.shop.h);
+  drawHanokRoof(ctx, -74, -76, 148, 74);
+  ctx.restore();
 }

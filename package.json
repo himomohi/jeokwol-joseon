@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview --host --port 47261",
     "typecheck": "tsc --noEmit",
-    "smoke": "vite-node scripts/sim-smoke.ts"
+    "smoke": "vite-node scripts/sim-smoke.ts",
+    "guide": "vite-node scripts/guide-unit.ts"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

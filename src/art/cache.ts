@@ -1,4 +1,6 @@
 import { iconCanvas } from "./icons";
+import { ITEMS } from "../content/items";
+import { drawItemForm } from "./forms";
 import { nearestPal, parseHex } from "./palette";
 
 const staticCache = new Map<string, HTMLCanvasElement>();
@@ -54,6 +56,7 @@ const PLAYER_PNG: Record<string, string> = {
 export function bumpArt(): void {
   gen += 1;
   staticCache.clear();
+  dropCache.clear();
 }
 
 export function cachedStatic(key: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void): HTMLCanvasElement {
@@ -70,8 +73,25 @@ export function cachedStatic(key: string, w: number, h: number, draw: (ctx: Canv
   return c;
 }
 
+const dropCache = new Map<string, HTMLCanvasElement>();
+
 export function groundDropCanvas(itemId: string): HTMLCanvasElement {
-  return iconCanvas(itemId, 32);
+  const k = `drop:${itemId}`;
+  let c = dropCache.get(k);
+  if (c) return c;
+  c = document.createElement("canvas");
+  c.width = 36;
+  c.height = 36;
+  const ctx = c.getContext("2d")!;
+  ctx.translate(18, 20);
+  const it = ITEMS[itemId];
+  if (it) drawItemForm(ctx, it.visual.form, it.visual.tint, it.visual.material, 0.95, "ground");
+  else {
+    const ic = iconCanvas(itemId, 32);
+    ctx.drawImage(ic, -16, -16);
+  }
+  dropCache.set(k, c);
+  return c;
 }
 
 export function cacheSize(): number {
