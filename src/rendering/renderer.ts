@@ -89,12 +89,7 @@ export class Renderer {
           drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "trunk", 1) });
           drawables.push({ groundY, z: 1.05, draw: () => drawProp(ctx, pr, "canopy", fade) });
         } else if (isHanokArt(pr.def.art) || pr.def.roof) {
-          const r = c.roofs.find((rr) => rr.art === pr.def.art && Math.abs(rr.x + rr.w * 0.5 - pr.x) < pr.def.w * 0.45);
-          if (r) {
-            const inside = p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
-            r.alpha = lerp(r.alpha, inside ? 0.22 : 1, 0.14);
-          }
-          const fade = r ? r.alpha : roofFade(pr, p.x, p.y);
+          const fade = roofFade(pr, p.x, p.y);
           drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "trunk", 1) });
           drawables.push({ groundY, z: 1.08, draw: () => drawProp(ctx, pr, "roof", fade) });
         } else {

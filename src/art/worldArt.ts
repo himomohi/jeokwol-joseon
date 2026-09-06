@@ -202,9 +202,9 @@ export function canopyFade(p: PropInst, px: number, py: number): number {
 export function roofFade(p: PropInst, px: number, py: number): number {
   if (!p.def.roof && !isHanokArt(p.def.art)) return 1;
   const inside =
-    Math.abs(px - p.x) < p.def.w * 0.5 &&
-    py < p.y + 12 &&
-    py > p.y - p.def.h * 0.7;
+    Math.abs(px - p.x) < p.def.w * 0.32 &&
+    py < p.y + 4 &&
+    py > p.y - p.def.h * 0.42;
   return inside ? 0.22 : 1;
 }
 
@@ -446,13 +446,19 @@ function drawGrave(ctx: CanvasRenderingContext2D): void {
   ctx.fillRect(-3, -6, 6, 2);
 }
 
-/** Local giwa rect in the same space as the walls — one solid building. */
+function hanokBody(w: number, h: number): { bw: number; bh: number } {
+  return {
+    bw: Math.max(44, Math.min(64, w * 0.52)),
+    bh: Math.max(36, Math.min(50, h * 0.5)),
+  };
+}
+
+/** Local giwa rect in the same space as the walls — overlaps the eave, no air gap. */
 export function hanokRoofLocal(w: number, h: number): { x: number; y: number; w: number; h: number } {
-  const bw = Math.max(38, Math.min(56, w * 0.48));
-  const bh = Math.max(26, Math.min(36, h * 0.42));
-  const rw = bw * 2 + 28;
-  const rh = Math.max(40, bh * 1.85);
-  return { x: -rw * 0.5, y: -rh + 2, w: rw, h: rh };
+  const { bw, bh } = hanokBody(w, h);
+  const rw = bw * 2 + 22;
+  const rh = Math.max(44, bh * 1.45);
+  return { x: -rw * 0.5, y: -rh - 6, w: rw, h: rh };
 }
 
 function paintHanokGiwa(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -461,37 +467,37 @@ function paintHanokGiwa(ctx: CanvasRenderingContext2D, w: number, h: number): vo
 }
 
 function paintHanokWalls(ctx: CanvasRenderingContext2D, art: string, w: number, h: number): void {
-  const bw = Math.max(38, Math.min(56, w * 0.48));
-  const bh = Math.max(26, Math.min(36, h * 0.42));
+  const { bw, bh } = hanokBody(w, h);
   const wood = matEnv("wood", PAL.earth_mid);
   const post = matEnv("wood", PAL.earth_dark);
+  const top = -18;
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
   ctx.fillRect(-bw - 4, bh - 4, bw * 2 + 8, 8);
 
   ctx.fillStyle = wood.fill;
-  ctx.fillRect(-bw, -6, bw * 2, bh);
+  ctx.fillRect(-bw, top, bw * 2, bh - top);
   ctx.strokeStyle = post.stroke;
-  ctx.lineWidth = 1.6;
-  ctx.strokeRect(-bw, -6, bw * 2, bh);
+  ctx.lineWidth = 1.8;
+  ctx.strokeRect(-bw, top, bw * 2, bh - top);
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-bw, -6, 5, bh);
-  ctx.fillRect(bw - 5, -6, 5, bh);
-  ctx.fillRect(-6, -6, 5, bh);
+  ctx.fillRect(-bw, top, 6, bh - top);
+  ctx.fillRect(bw - 6, top, 6, bh - top);
+  ctx.fillRect(-6, top, 5, bh - top);
   for (let i = -bw + 12; i < bw - 8; i += 11) {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
     ctx.globalAlpha = 0.35;
-    ctx.fillRect(i, -4, 1.6, bh - 4);
+    ctx.fillRect(i, top + 2, 1.6, bh - top - 4);
     ctx.globalAlpha = 1;
   }
 
   ctx.fillStyle = snapEnv(PAL.bone_light);
-  ctx.fillRect(-10, 4, 20, bh - 10);
+  ctx.fillRect(-11, 6, 22, bh - 12);
   ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.strokeRect(-10, 4, 20, bh - 10);
+  ctx.strokeRect(-11, 6, 22, bh - 12);
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-1, 8, 2, bh - 16);
+  ctx.fillRect(-1, 10, 2, bh - 18);
 
   if (art === "shop") {
     ctx.fillStyle = snapEnv(PAL.earth_dark);
@@ -512,7 +518,7 @@ function paintHanokWalls(ctx: CanvasRenderingContext2D, art: string, w: number, 
   }
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-bw - 6, -10, bw * 2 + 12, 6);
+  ctx.fillRect(-bw - 8, top - 6, bw * 2 + 16, 10);
 }
 
 /** Opaque walls + opaque giwa as one solid building. Indoor fade uses the roof layer only. */
