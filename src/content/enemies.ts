@@ -1,6 +1,7 @@
 import type { AiRole, BiomeId, Grade } from "../core/types";
 
 export type Family =
+  | "pest"
   | "bandit"
   | "beast"
   | "dokkaebi"
@@ -79,7 +80,7 @@ export const ENEMIES: EnemyDef[] = [
   B("bandit_deserter", "탈영병", "bandit", ["hanyang", "riverside"], "meleeChase", 60, 13, 6, 100, 22, "loot_military", "soldier"),
   B("bandit_smuggler", "밀수꾼", "bandit", ["riverside", "swamp"], "flank", 40, 9, 3, 112, 15, "loot_bandit", "bandit"),
   B("bandit_cross", "쇠뇌수", "bandit", ["mountain", "bamboo"], "rangedKite", 36, 12, 3, 84, 19, "loot_bandit", "bandit_bow", { attackRange: 210 }),
-  B("bandit_chief", "산적두목", "bandit", ["mountain"], "charge", 90, 16, 8, 96, 36, "loot_bandit_rare", "bandit_chief", { grades: ["jung", "sang"], radius: 16 }),
+  B("bandit_chief", "산적두령", "bandit", ["mountain"], "charge", 90, 16, 8, 96, 36, "loot_bandit_rare", "bandit_chief", { grades: ["jung", "sang"], radius: 16 }),
 
   B("tiger", "산호랑이", "beast", ["mountain", "bamboo", "snow"], "charge", 80, 16, 6, 130, 32, "loot_beast", "tiger", { radius: 18, attackRange: 32 }),
   B("white_tiger", "흰호랑이", "beast", ["snow", "mountain"], "charge", 110, 18, 8, 134, 44, "loot_beast_rare", "tiger_white", { radius: 18 }),
@@ -117,14 +118,14 @@ export const ENEMIES: EnemyDef[] = [
   B("uigeumbu", "의금부나장", "military", ["hanyang"], "meleeChase", 90, 17, 11, 104, 36, "loot_military_rare", "officer"),
 
   B("eagle", "독수리", "wildlife", ["mountain", "snow"], "rangedKite", 34, 11, 2, 150, 14, "loot_wild", "bird", { radius: 12, attackRange: 130 }),
-  B("beastling", "산짐승", "wildlife", ["mountain", "bamboo"], "meleeChase", 32, 8, 3, 120, 10, "loot_wild", "beast"),
+  B("beastling", "산짐승", "pest", ["mountain", "bamboo", "hanyang"], "meleeChase", 32, 8, 3, 120, 10, "loot_wild", "beast"),
   B("viper", "독사", "wildlife", ["swamp", "bamboo", "riverside"], "flank", 24, 12, 1, 100, 12, "loot_wild", "snake", { radius: 9 }),
   B("goat", "산양", "wildlife", ["mountain", "snow"], "charge", 48, 10, 5, 125, 14, "loot_wild", "goat"),
   B("crows", "까마귀떼", "wildlife", ["haunted", "hanyang"], "flank", 22, 8, 1, 160, 10, "loot_wild", "bird", { radius: 11 }),
 
   B("croc", "늪악어", "swamp", ["swamp", "riverside"], "charge", 95, 16, 9, 80, 32, "loot_swamp", "croc", { radius: 18 }),
-  B("plague_rat", "역병쥐", "swamp", ["swamp", "village"], "flank", 20, 8, 1, 140, 8, "loot_swamp", "rat", { radius: 8 }),
-  B("bug", "독충", "swamp", ["swamp", "bamboo"], "meleeChase", 18, 9, 0, 130, 8, "loot_swamp", "bug", { radius: 8 }),
+  B("plague_rat", "역병쥐", "pest", ["swamp", "village", "hanyang"], "flank", 20, 8, 1, 140, 8, "loot_swamp", "rat", { radius: 8 }),
+  B("bug", "독충", "pest", ["swamp", "bamboo", "hanyang"], "meleeChase", 18, 9, 0, 130, 8, "loot_swamp", "bug", { radius: 8 }),
   B("imugi", "이무기", "swamp", ["swamp", "riverside"], "groundSlam", 130, 18, 10, 88, 52, "loot_swamp_rare", "imugi", { radius: 22, grades: ["jung", "sang"] }),
   B("plague_witch", "역병무당", "swamp", ["swamp", "haunted"], "rangedKite", 60, 15, 5, 90, 34, "loot_swamp_rare", "witch", { attackRange: 180 }),
 
@@ -134,11 +135,12 @@ export const ENEMIES: EnemyDef[] = [
   B("bell_spirit", "범종령", "shrine", ["haunted"], "groundSlam", 88, 16, 8, 70, 38, "loot_shrine", "bell"),
 
   B("boss_tiger", "적월호랑이", "boss", ["mountain"], "charge", 520, 24, 12, 140, 220, "loot_boss_tiger", "tiger_blood", { boss: true, radius: 26, attackRange: 40, aggro: 360 }),
-  B("boss_bandit", "한양산적왕", "boss", ["mountain"], "meleeChase", 480, 22, 14, 110, 200, "loot_boss_bandit", "bandit_king", { boss: true, radius: 20 }),
+  B("boss_bandit", "산적두목", "boss", ["hanyang", "road"], "meleeChase", 320, 18, 12, 108, 160, "loot_boss_bandit", "bandit_king", { boss: true, radius: 20 }),
   B("boss_gumiho", "구미호 아씨", "spirit", ["bamboo"], "rangedKite", 500, 23, 10, 125, 240, "loot_boss_gumiho", "gumiho_lady", { boss: true, radius: 18, attackRange: 200 }),
   B("boss_abbot", "폐사 주지", "boss", ["haunted"], "groundSlam", 560, 21, 16, 80, 230, "loot_boss_abbot", "abbot", { boss: true, radius: 20 }),
   B("boss_snow", "설산 백호", "boss", ["snow"], "charge", 600, 26, 14, 145, 250, "loot_boss_snow", "tiger_white", { boss: true, radius: 24 }),
   B("boss_imugi", "늪의 이무기왕", "boss", ["swamp"], "groundSlam", 640, 25, 15, 90, 260, "loot_boss_imugi", "imugi_king", { boss: true, radius: 28, attackRange: 50 }),
+  B("boss_wraith", "원혼대승", "boss", ["haunted"], "groundSlam", 720, 28, 16, 88, 280, "loot_boss_wraith", "reaper", { boss: true, radius: 22, attackRange: 46, aggro: 380 }),
 ];
 
 export const ENEMY_BY_ID: Record<string, EnemyDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));

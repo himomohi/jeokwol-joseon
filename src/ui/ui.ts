@@ -88,8 +88,8 @@ export function renderUi(root: HTMLElement, sim: Sim, ui: UiState, extra: { fps:
 
   if (sim.mode === "dead") {
     overlay.innerHTML = `<div class="overlay"><div class="card"><h1>적월에 잠기다</h1>
-      <p>숨이 끊겼다. 주막에서 다시 눈을 뜰 수 있다.</p>
-      <div class="row"><button data-rest>주막에서 일어난다</button></div></div></div>`;
+      <p>숨이 끊겼다. 거점에서 다시 눈을 뜰 수 있다.</p>
+      <div class="row"><button data-rest>거점에서 일어난다</button></div></div></div>`;
     overlay.querySelector("[data-rest]")?.addEventListener("click", () => handleCommand(sim, { type: "rest" }));
   }
 }
@@ -100,8 +100,8 @@ function titleHtml(ui: UiState): string {
   const r = reviewContent();
   return `<div class="overlay"><div class="card">
     <h1>적월조선</h1>
-    <h2>핏빛 달이 한양을 덮던 해</h2>
-    <p>한양 근교에서 길을 나선다. 산적과 원혼, 호랑이와 구미호가 적월 아래 걷는다. 전직 교관을 찾아 초식을 열고, 마을로 돌아와 숨을 고르라. 세계는 리셋되지 않는다.</p>
+    <h2>핏빛 달이 조선을 덮던 해</h2>
+    <p>무명촌에서 동녘 벼밭으로 나선다. 돌담 고갯길을 넘어 산적두목을 베고 한성 외곽에 이른다. 한성에서 길을 묻고, 스무 급에 교관의 자리를 밟아 전직하라. 늪의 독, 설산의 한기, 폐사의 원혼이 길을 막는다. 세계는 리셋되지 않는다.</p>
     <div class="row"><input id="nm" value="${ui.name}" maxlength="8" placeholder="이름"/></div>
     <div class="row">${jobs}</div>
     <p>${JOBS[ui.job].desc}</p>
@@ -163,7 +163,7 @@ function hudHtml(sim: Sim, extra: { fps: number; fpsSim: number; post: boolean; 
   </div>
   ${extra.webglLost ? `<div class="narrow-warn">화면 후처리가 끊겼다. 캔버스로 그린다.</div>` : ""}
   <div class="skillbar">${slots}</div>
-  <div class="hint">${npc ? `[E] ${npc.name}에게 말을 건넨다` : "마을 밖으로 나가 싸우고, 광장의 교관에게 전직한다. I 행낭 K 초식 M 지도 Esc 멈춤"} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 8 ? " · 전직 가능" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
+  <div class="hint">${npc ? `[E] ${npc.name}에게 말을 건넨다` : "동녘 벼밭으로 나가 싸우고, 한성에서 교관을 찾는다. I 행낭 K 초식 M 지도 Esc 멈춤"} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 20 ? " · 전직 급수" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
   <div class="messages">${sim.messages.slice(-5).map((m) => `<div>${escapeHtml(m.text)}</div>`).join("")}</div>`;
 }
 
@@ -203,15 +203,15 @@ function panelHtml(sim: Sim, panel: Panel): string {
     return `<h2>몸가짐</h2>
       <p>${sim.meta.name} · ${JOBS[sim.meta.job].name} · ${sim.meta.level}급</p>
       <p>공 ${st.atk.toFixed(1)} · 방 ${st.def.toFixed(1)} · 체 ${st.maxHp.toFixed(0)} · 마 ${st.maxMp.toFixed(0)} · 속 ${st.spd.toFixed(0)} · 치명 ${(st.crit * 100).toFixed(0)}% · 행운 ${st.luck.toFixed(0)}</p>
-      <p>전직: ${adv.map((j) => `${j.name} (${j.reqLevel}급${j.reqFlag ? ", 연조" : ""})`).join(" · ")}</p>
+      <p>전직: ${adv.map((j) => `${j.name} (${j.reqLevel}급${j.reqFlag && !sim.meta.flags[j.reqFlag] ? ", 교관 표식" : j.reqFlag ? ", 표식 있음" : ""})`).join(" · ")}</p>
       <p>표식: ${Object.keys(sim.meta.flags).filter((k) => sim.meta.flags[k]).join(", ") || "없음"}</p>`;
   }
   if (panel === "map") {
-    return `<h2>행적도</h2><canvas class="map-canvas" id="bigmap" width="640" height="400"></canvas><p>한양 근교 마을이 중심. 밝힌 땅만 보인다.</p>`;
+    return `<h2>행적도</h2><canvas class="map-canvas" id="bigmap" width="640" height="400"></canvas><p>무명촌에서 한성으로 이어진 한 줄기 길. 밝힌 땅만 보인다.</p>`;
   }
   if (panel === "help") {
-    return `<h2>조작</h2><p>WASD/방향키 이동 · 마우스 조준 · 좌클릭 또는 J 기본 공격 · 1–8 초식 · E 대화 · F 줍기 · R 주막 휴식 · I 행낭 · K 초식 · M 지도 · C 몸 · Esc 멈춤 · P 후처리 끄기</p>
-    <p>저장은 멈춤 메뉴 또는 자동으로 주막 휴식 시 시도한다. 로컬 세 자리.</p>`;
+    return `<h2>조작</h2><p>WASD/방향키 이동 · 마우스 조준 · 좌클릭 또는 J 기본 공격 · 1–8 초식 · E 대화 · F 줍기 · R 거점 휴식 · I 행낭 · K 초식 · M 지도 · C 몸 · Esc 멈춤 · P 후처리 끄기</p>
+    <p>저장은 멈춤 메뉴 또는 거점 휴식 시 시도한다. 로컬 세 자리.</p>`;
   }
   return `<h2>멈춤</h2>`;
 }

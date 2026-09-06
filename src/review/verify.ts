@@ -1,7 +1,7 @@
 import { ENEMIES } from "../content/enemies";
 import { SKILLS, JOBS } from "../content/jobs";
 import { ITEMS } from "../content/items";
-import { BIOMES } from "../content/world";
+import { BIOMES, HUBS, NPCS, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 
 export interface ReviewReport {
@@ -32,6 +32,12 @@ export function reviewContent(): ReviewReport {
   if (enemies.length < 48) notes.push(`적 원형 ${enemies.length} < 48`);
   if (bosses.length < 6) notes.push("보스 6 미만");
   if (Object.keys(BIOMES).length < 7) notes.push("바이옴 부족");
+  if (HUBS.length < 5) notes.push("거점 5 미만");
+  if (ROAD_EDGES.length < 8) notes.push("도로 줄기 부족");
+  if (ZONES.length < 8) notes.push("존 테이블 부족");
+  if (NPCS.filter((n) => n.advanceJob).length < 12) notes.push("전직 교관 12 미만");
+  const gated = Object.values(JOBS).filter((j) => j.tier === 2 && (!j.reqFlag?.startsWith("trainer_") || j.reqLevel < 20));
+  if (gated.length) notes.push("전직 게이트(Lv20·trainerFlag) 누락");
   const cache = new TerrainCache(12345, 4);
   for (let i = 0; i < 12; i++) cache.get(i, 0, i);
   const a = biomeAt(12345, 80, 90);

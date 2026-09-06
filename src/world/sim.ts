@@ -12,12 +12,12 @@ import type {
   SimEvent,
   Stats,
 } from "../core/types";
-import { JOBS, SKILLS, advJobsOf, jobById, skillsForJob, type SkillDef } from "../content/jobs";
+import { JOBS, SKILLS, jobById, skillsForJob, type SkillDef } from "../content/jobs";
 import { ENEMIES, ENEMY_BY_ID, GRADE_MOD, type EnemyDef } from "../content/enemies";
 import { ITEMS, SHOP_LIST, STARTER_BOOTS, STARTER_CHEST, STARTER_WEAPON, itemById } from "../content/items";
-import { LOOT_TABLES, NPCS, POI } from "../content/world";
+import { HUBS, LOOT_TABLES, NPCS, POI, SPAWN_FAMILY_TO_ENEMY, hubAt, restHubs, zoneAt } from "../content/world";
 import { addStats } from "../content/jobs";
-import { TerrainCache, biomeAt, type ChunkData, type Solid } from "./map";
+import { TerrainCache, biomeAt, distToRoad, type ChunkData, type Solid } from "./map";
 import { pushOut } from "./collision";
 
 export interface Actor {
@@ -110,6 +110,7 @@ export interface PlayerMeta {
   bar: (string | null)[];
   flags: Record<string, boolean>;
   kills: Record<string, number>;
+  lastHub?: string;
 }
 
 export interface ChunkPersist {
@@ -204,6 +205,7 @@ export function playerStats(meta: PlayerMeta): Stats {
 function withBuffs(sim: Sim, s: Stats): Stats {
   let o = s;
   for (const b of sim.buffs) o = addStats(o, b.stats);
+  o.spd = Math.max(48, o.spd);
   return o;
 }
 
@@ -247,6 +249,7 @@ function makePlayer(name: string, job: BaseJobId): { actor: Actor; meta: PlayerM
     bar: [j.skills[0] ?? null, j.skills[1] ?? null, j.skills[2] ?? null, j.skills[3] ?? null, null, null, null, null],
     flags: {},
     kills: {},
+    lastHub: "village",
   };
   const actor: Actor = {
     id: "player",
@@ -296,53 +299,37 @@ function giveStarter(sim: Sim): void {
 }
 
 function npcActors(): Actor[] {
-  const spots: { id: string; x: number; y: number }[] = [
-    { id: "trainer_musa", x: -90, y: 30 },
-    { id: "trainer_gungsoo", x: -90, y: 70 },
-    { id: "trainer_dosa", x: 40, y: -90 },
-    { id: "trainer_uiwon", x: 80, y: -90 },
-    { id: "trainer_dojeok", x: -180, y: 40 },
-    { id: "trainer_gibyeong", x: 200, y: 40 },
-    { id: "shop_weapon", x: -120, y: 20 },
-    { id: "shop_herb", x: -150, y: 20 },
-    { id: "innkeep", x: 130, y: 20 },
-    { id: "villager_a", x: 60, y: 90 },
-    { id: "villager_b", x: -40, y: 150 },
-  ];
-  return spots.map((s) => {
-    const n = NPCS.find((n) => n.id === s.id)!;
-    return {
-      id: s.id,
-      kind: "npc" as const,
-      defId: n.id,
-      name: n.name,
-      x: s.x,
-      y: s.y,
-      px: s.x,
-      py: s.y,
-      vx: 0,
-      vy: 0,
-      facing: 1.2,
-      hp: 999,
-      hpMax: 999,
-      mp: 0,
-      radius: 12,
-      team: 0,
-      grade: "ha" as const,
-      flash: 0,
-      stunUntil: 0,
-      invulnUntil: 0,
-      attackAnim: 0,
-      walkPhase: 0,
-      dead: false,
-      art: n.role === "trainer" ? "npc_trainer" : n.role === "shop" ? "npc_shop" : "npc",
-      aiT: 0,
-      aiTx: s.x,
-      aiTy: s.y,
-      attackCd: 0,
-      npcId: n.id,
-    };
-  });
+  return NPCS.map((n) => ({
+    id: n.id,
+    kind: "npc" as const,
+    defId: n.id,
+    name: n.name,
+    x: n.x,
+    y: n.y,
+    px: n.x,
+    py: n.y,
+    vx: 0,
+    vy: 0,
+    facing: 1.2,
+    hp: 999,
+    hpMax: 999,
+    mp: 0,
+    radius: 12,
+    team: 0,
+    grade: "ha" as const,
+    flash: 0,
+    stunUntil: 0,
+    invulnUntil: 0,
+    attackAnim: 0,
+    walkPhase: 0,
+    dead: false,
+    art: n.role === "trainer" ? "npc_trainer" : n.role === "shop" ? "npc_shop" : "npc",
+    aiT: 0,
+    aiTx: n.x,
+    aiTy: n.y,
+    attackCd: 0,
+    npcId: n.id,
+  }));
 }
 
 export function createEmptySim(): Sim {
@@ -479,26 +466,57 @@ function persistOf(sim: Sim, cx: number, cy: number): ChunkPersist {
   return p;
 }
 
+function enemiesNear(sim: Sim, x: number, y: number, r = 400): number {
+  let n = 0;
+  for (const a of sim.actors) {
+    if (a.kind !== "enemy" || a.dead) continue;
+    const def = ENEMY_BY_ID[a.defId];
+    if (def?.boss) continue;
+    if (dist(a.x, a.y, x, y) < r) n += 1;
+  }
+  return n;
+}
+
+function combatCapAt(x: number, y: number): number {
+  const z = zoneAt(x, y);
+  if (z?.tight) return 7;
+  return 11;
+}
+
+function spawnPool(biome: ReturnType<typeof biomeAt>, z: ReturnType<typeof zoneAt>): EnemyDef[] {
+  const allowed = new Set<string>();
+  if (z) {
+    for (const f of z.families) {
+      for (const fam of SPAWN_FAMILY_TO_ENEMY[f] ?? [f]) allowed.add(fam);
+    }
+  }
+  let pool = ENEMIES.filter((e) => !e.boss && e.biomes.includes(biome) && (!allowed.size || allowed.has(e.family)));
+  if (!pool.length) pool = ENEMIES.filter((e) => !e.boss && e.biomes.includes(biome));
+  return pool;
+}
+
+function enemiesInChunk(sim: Sim, cx: number, cy: number): number {
+  let n = 0;
+  for (const a of sim.actors) {
+    if (a.kind !== "enemy" || a.dead) continue;
+    const def = ENEMY_BY_ID[a.defId];
+    if (def?.boss) continue;
+    if (worldToChunk(a.x) === cx && worldToChunk(a.y) === cy) n += 1;
+  }
+  return n;
+}
+
 function spawnEnemies(sim: Sim, chunk: ChunkData): void {
   const cx = chunk.cx;
   const cy = chunk.cy;
   const p = persistOf(sim, cx, cy);
   const ox = cx * CHUNK;
   const oy = cy * CHUNK;
-  const village = Math.abs(cx) + Math.abs(cy) === 0;
 
-  for (const [id, poi] of Object.entries(POI)) {
+  for (const poi of Object.values(POI)) {
+    if (!poi.boss) continue;
     if (worldToChunk(poi.x) !== cx || worldToChunk(poi.y) !== cy) continue;
-    const bossMap: Record<string, string> = {
-      tigerRidge: "boss_tiger",
-      banditCamp: "boss_bandit",
-      bamboo: "boss_gumiho",
-      haunted: "boss_abbot",
-      snow: "boss_snow",
-      swamp: "boss_imugi",
-    };
-    const bid = bossMap[id];
-    if (!bid) continue;
+    const bid = poi.boss;
     const sk = `boss:${bid}`;
     if (sim.meta.flags[`killed_${bid}`]) continue;
     if (p.killed[sk]) continue;
@@ -507,25 +525,32 @@ function spawnEnemies(sim: Sim, chunk: ChunkData): void {
     if (def) sim.actors.push(makeEnemy(sim, def, "sang", poi.x, poi.y, sk));
   }
 
-  if (village) {
-    return;
-  }
-
-  const extra = (cx === 0 && (cy === 1 || cy === -1)) || (cy === 0 && (cx === 1 || cx === -1)) ? 4 : 0;
-  for (let i = 0; i < 7 + extra; i++) {
+  const midX = ox + CHUNK * 0.5;
+  const midY = oy + CHUNK * 0.5;
+  const zone = zoneAt(midX, midY);
+  const onPath = !!zone || distToRoad(midX, midY) < 90;
+  const capLocal = !onPath ? 2 : zone?.tight ? 6 : 10;
+  const tries = capLocal + 5;
+  for (let i = 0; i < tries; i++) {
+    if (enemiesInChunk(sim, cx, cy) >= capLocal) break;
+    if (enemiesNear(sim, sim.player.x, sim.player.y, 400) >= combatCapAt(sim.player.x, sim.player.y) && dist(midX, midY, sim.player.x, sim.player.y) < 520) break;
     const sk = `s:${cx}:${cy}:${i}`;
     if (p.killed[sk] && sim.time - p.killed[sk] < 90) continue;
     if (sim.actors.some((a) => a.spawnKey === sk)) continue;
     const rng = new Rng(hash3(sim.seed, cx * 31 + i, cy * 17) ^ STREAM_SALT.world);
     const x = ox + rng.float(24, CHUNK - 24);
     const y = oy + rng.float(24, CHUNK - 24);
+    if (hubAt(x, y)) continue;
     const biome = biomeAt(sim.seed, x, y);
     if (biome === "village") continue;
-    const pool = ENEMIES.filter((e) => !e.boss && e.biomes.includes(biome));
+    const z = zoneAt(x, y);
+    const pool = spawnPool(biome, z);
     if (!pool.length) continue;
-    if (rng.float() > (extra ? 0.15 : 0.42)) continue;
+    const keep = !onPath ? 0.35 : z?.tight ? 0.55 : 0.62;
+    if (rng.float() > keep) continue;
     const def = rng.pick(pool);
-    const g: Grade = rng.chance(0.08) ? "sang" : rng.chance(0.28) ? "jung" : "ha";
+    const elite = z?.eliteBias ?? 0.08;
+    const g: Grade = rng.chance(elite) ? "sang" : rng.chance(0.22 + elite) ? "jung" : "ha";
     const grade = def.grades.includes(g) ? g : def.grades[0]!;
     sim.actors.push(makeEnemy(sim, def, grade, x, y, sk));
   }
@@ -533,6 +558,9 @@ function spawnEnemies(sim: Sim, chunk: ChunkData): void {
 
 function makeEnemy(sim: Sim, def: EnemyDef, grade: Grade, x: number, y: number, spawnKey: string): Actor {
   const g = GRADE_MOD[grade];
+  const z = zoneAt(x, y);
+  const lv = z ? (z.lvMin + z.lvMax) * 0.5 : 4;
+  const sc = def.boss ? 1 : 0.62 + lv * 0.038;
   return {
     id: nid(sim, "e"),
     kind: "enemy",
@@ -545,8 +573,8 @@ function makeEnemy(sim: Sim, def: EnemyDef, grade: Grade, x: number, y: number, 
     vx: 0,
     vy: 0,
     facing: rngFacing(sim),
-    hp: def.hp * g.hp,
-    hpMax: def.hp * g.hp,
+    hp: def.hp * g.hp * sc,
+    hpMax: def.hp * g.hp * sc,
     mp: 0,
     radius: def.radius,
     team: 1,
@@ -631,7 +659,7 @@ function kill(sim: Sim, target: Actor, src: Actor | { id: string }): void {
   if (target.kind !== "enemy") {
     if (target.kind === "player") {
       sim.mode = "dead";
-      emit(sim, { type: "message", text: "쓰러졌다… 주막에서 다시 일어난다.", kind: "warn" });
+      emit(sim, { type: "message", text: "쓰러졌다… 거점에서 다시 일어난다.", kind: "warn" });
     }
     return;
   }
@@ -649,6 +677,7 @@ function kill(sim: Sim, target: Actor, src: Actor | { id: string }): void {
     if (def.id === "boss_abbot") sim.meta.flags.quest_tomb = true;
     if (def.id === "boss_abbot") sim.meta.flags.quest_shrine = true;
     if (def.id === "boss_imugi") sim.meta.flags.quest_swamp = true;
+    if (def.id === "boss_wraith") sim.meta.flags.quest_wraith = true;
   }
   if (src.id === "player") gainXp(sim, xp);
   rollLoot(sim, def, target.x, target.y);
@@ -923,7 +952,10 @@ function useItem(sim: Sim, instId: string): void {
   const st = statsNow(sim);
   if (it.heal) sim.player.hp = Math.min(st.maxHp, sim.player.hp + it.heal);
   if (it.mp) sim.player.mp = Math.min(st.maxMp, sim.player.mp + it.mp);
-  if (it.id === "antidote") sim.buffs = sim.buffs.filter((b) => !b.dot);
+  if (it.id === "antidote") {
+    sim.buffs = sim.buffs.filter((b) => !b.dot && b.id !== "hazard_poison");
+    sim.buffs.push({ id: "poison_immune", name: "해독", until: sim.time + 18, stats: {} });
+  }
   inst!.qty -= 1;
   if (inst!.qty <= 0) {
     sim.meta.inventory = sim.meta.inventory.filter((i) => i.instId !== instId);
@@ -943,21 +975,32 @@ function talkNpc(sim: Sim, npcId: string): void {
     return;
   }
   if (n.role === "inn") {
-    sim.talk = { npcId, text: "주막에서 쉬면 상처가 아물고, 행적이 기록된다. (R 휴식 · 저장은 메뉴)" };
+    sim.talk = { npcId, text: "거점에서 쉬면 상처가 아물고, 행적이 기록된다. (R 휴식 · 저장은 메뉴)" };
     return;
   }
   if (n.role === "trainer") {
+    if (n.trainerFlag && !sim.meta.flags[n.trainerFlag]) {
+      sim.meta.flags[n.trainerFlag] = true;
+      emit(sim, { type: "message", text: `${n.name}의 표식을 받았다.`, kind: "info" });
+    }
     const playerBase = JOBS[sim.meta.job].base;
     if (n.job && n.job !== playerBase) {
       sim.talk = { npcId, text: "다른 길의 교관이다. 제 몸을 찾아가거라." };
       return;
     }
-    const adv = advJobsOf(JOBS[sim.meta.job].base);
-    const choices = adv.map((j) => ({
-      label: `${j.name}로 전직 (${j.reqLevel}급${j.reqFlag ? " · 연조 필요" : ""})`,
-      job: j.id,
-    }));
-    sim.talk = { npcId, text: n.lines.join("\n"), choices };
+    if (n.advanceJob) {
+      const j = jobById(n.advanceJob);
+      const has = !j.reqFlag || !!sim.meta.flags[j.reqFlag];
+      const lvOk = sim.meta.level >= j.reqLevel;
+      const note = !lvOk ? ` ${j.reqLevel}급이 되어야 한다.` : !has ? " 표식은 얻었으나 아직 문이 닫혀 있다." : " 전직할 수 있다.";
+      sim.talk = {
+        npcId,
+        text: `${n.lines.join("\n")}\n${note}`,
+        choices: [{ label: `${j.name}로 전직 (${j.reqLevel}급)`, job: j.id }],
+      };
+      return;
+    }
+    sim.talk = { npcId, text: n.lines.join("\n") };
     return;
   }
   sim.talk = { npcId, text: sim.combat.pick(n.lines) };
@@ -983,7 +1026,7 @@ function tryAdvance(sim: Sim, jobId: JobId): void {
     return;
   }
   if (j.reqFlag && !sim.meta.flags[j.reqFlag]) {
-    emit(sim, { type: "message", text: "아직 연조가 부족하다. 표식을 가져오너라.", kind: "warn" });
+    emit(sim, { type: "message", text: "교관의 표식이 없다. 한성에서 길을 묻고 그 자리를 밟아라.", kind: "warn" });
     return;
   }
   sim.meta.job = jobId;
@@ -1020,22 +1063,47 @@ function sell(sim: Sim, instId: string): void {
 }
 
 function rest(sim: Sim): void {
-  if (dist(sim.player.x, sim.player.y, 130, 20) > 80 && dist(sim.player.x, sim.player.y, 0, 0) > 240) {
-    emit(sim, { type: "message", text: "마을에서만 편히 쉴 수 있다", kind: "warn" });
+  const hub = hubAt(sim.player.x, sim.player.y);
+  const nearInn = sim.actors.some((a) => {
+    if (a.kind !== "npc" || !a.npcId) return false;
+    const n = NPCS.find((x) => x.id === a.npcId);
+    return n?.role === "inn" && dist(sim.player.x, sim.player.y, a.x, a.y) < 80;
+  });
+  if (sim.mode !== "dead" && !hub?.rest && !nearInn) {
+    emit(sim, { type: "message", text: "거점(무명촌·한성·초소·나루·암자)에서만 편히 쉴 수 있다", kind: "warn" });
     return;
   }
   const st = statsNow(sim);
   sim.player.hp = st.maxHp;
   sim.player.mp = st.maxMp;
+  sim.buffs = sim.buffs.filter((b) => b.id !== "hazard_poison" && b.id !== "hazard_chill");
   if (sim.mode === "dead") {
     sim.mode = "play";
     sim.player.dead = false;
-    sim.player.x = 20;
-    sim.player.y = 40;
-    sim.player.px = 20;
-    sim.player.py = 40;
+    const dest = respawnHub(sim);
+    sim.player.x = dest.x + 20;
+    sim.player.y = dest.y + 40;
+    sim.player.px = sim.player.x;
+    sim.player.py = sim.player.y;
+  } else if (hub) {
+    sim.meta.lastHub = hub.id;
   }
-  emit(sim, { type: "message", text: "주막에서 숨을 고쳤다.", kind: "info" });
+  emit(sim, { type: "message", text: "거점에서 숨을 고쳤다.", kind: "info" });
+}
+
+function respawnHub(sim: Sim): { x: number; y: number } {
+  const visited = restHubs().filter((h) => sim.meta.flags[`hub_${h.id}`] || h.id === sim.meta.lastHub);
+  const list = visited.length ? visited : [HUBS.find((h) => h.id === "village")!];
+  let best = list[0]!;
+  let bd = Infinity;
+  for (const h of list) {
+    const d = dist(sim.player.x, sim.player.y, h.x, h.y);
+    if (d < bd) {
+      bd = d;
+      best = h;
+    }
+  }
+  return best;
 }
 
 export function handleCommand(sim: Sim, cmd: Command): void {
@@ -1210,6 +1278,58 @@ function tickFog(sim: Sim): void {
   }
 }
 
+function tickHazards(sim: Sim): void {
+  if (sim.player.dead) return;
+  if (hubAt(sim.player.x, sim.player.y)) {
+    sim.buffs = sim.buffs.filter((b) => b.id !== "hazard_poison" && b.id !== "hazard_chill");
+    return;
+  }
+  const z = zoneAt(sim.player.x, sim.player.y);
+  const biome = biomeAt(sim.seed, sim.player.x, sim.player.y);
+  const immune = sim.buffs.some((b) => b.id === "poison_immune" && b.until > sim.time);
+  const poison = (z?.hazard === "poison" || biome === "swamp") && !immune;
+  const chill = z?.hazard === "chill" || biome === "snow";
+  const bump = (id: string, name: string, stats: Partial<Stats>, dot: number) => {
+    const exist = sim.buffs.find((b) => b.id === id);
+    if (!exist) {
+      sim.buffs.push({ id, name, until: sim.time + 1.4, stats, dot, tag: "player" });
+      emit(sim, { type: "message", text: name, kind: "warn" });
+    } else exist.until = sim.time + 1.4;
+  };
+  if (poison) bump("hazard_poison", "늪독이 맥을 문다", {}, 5);
+  else sim.buffs = sim.buffs.filter((b) => b.id !== "hazard_poison");
+  if (chill) bump("hazard_chill", "한기가 뼈를 벤다", { spd: -38 }, 3);
+  else sim.buffs = sim.buffs.filter((b) => b.id !== "hazard_chill");
+}
+
+function tickProgress(sim: Sim): void {
+  const hub = hubAt(sim.player.x, sim.player.y);
+  if (hub) {
+    sim.meta.flags[`hub_${hub.id}`] = true;
+    sim.meta.lastHub = hub.id;
+  }
+  for (const [k, poi] of Object.entries(POI)) {
+    const d = dist(sim.player.x, sim.player.y, poi.x, poi.y);
+    if (d < 240) sim.meta.flags[`poi_${k}`] = true;
+    if (poi.flag && d < 88 && !sim.meta.flags[poi.flag]) {
+      sim.meta.flags[poi.flag] = true;
+      emit(sim, { type: "message", text: `${poi.name}의 표식을 받았다.`, kind: "info" });
+    }
+    if (k === "dojo" && d < 88) sim.meta.flags.trainer_magung = true;
+    if (k === "rift" && d < 160 && !sim.meta.flags.ending_rift) {
+      sim.meta.flags.ending_rift = true;
+      emit(sim, { type: "message", text: "적월의 균열이 발밑에서 숨 쉰다. 행적의 끝이 보인다.", kind: "warn" });
+    }
+  }
+  for (const n of NPCS) {
+    if (!n.trainerFlag) continue;
+    if (dist(sim.player.x, sim.player.y, n.x, n.y) < 70 && !sim.meta.flags[n.trainerFlag]) {
+      sim.meta.flags[n.trainerFlag] = true;
+      emit(sim, { type: "message", text: `${n.name}의 자리를 밟았다.`, kind: "info" });
+    }
+  }
+}
+
 export function step(sim: Sim, dt: number): void {
   sim.events.length = 0;
   if (sim.mode !== "play" || sim.paused) return;
@@ -1242,6 +1362,7 @@ export function step(sim: Sim, dt: number): void {
     sim.player.mp = Math.min(st.maxMp, sim.player.mp + dt * 3.2);
     resolveMove(sim, sim.player, sim.player.x + sim.player.vx * dt, sim.player.y + sim.player.vy * dt);
     sim.player.facing = angTo(sim.player.x, sim.player.y, sim.aimX, sim.aimY);
+    tickHazards(sim);
   }
 
   const chunks = sim.terrain.around(sim.player.x, sim.player.y, sim.time, 2);
@@ -1294,8 +1415,8 @@ export function step(sim: Sim, dt: number): void {
   sim.buffs = sim.buffs.filter((b) => b.until > sim.time);
   for (const b of sim.buffs) {
     if (b.dot && b.tag) {
-      const t = sim.actors.find((a) => a.id === b.tag);
-      if (t && sim.tick % Math.round(1 / dt) === 0) deal(sim, { id: "dot", name: b.name }, t, Math.round(b.dot), false);
+      const t = b.tag === "player" || b.tag === sim.player.id ? sim.player : sim.actors.find((a) => a.id === b.tag);
+      if (t && !t.dead && sim.tick % Math.round(1 / dt) === 0) deal(sim, { id: "dot", name: b.name }, t, Math.max(1, Math.round(b.dot)), false);
     }
   }
 
@@ -1324,10 +1445,7 @@ export function step(sim: Sim, dt: number): void {
   sim.messages = sim.messages.filter((m) => sim.time - m.t < 4);
 
   tickFog(sim);
-
-  for (const [k, poi] of Object.entries(POI)) {
-    if (dist(sim.player.x, sim.player.y, poi.x, poi.y) < 240) sim.meta.flags[`poi_${k}`] = true;
-  }
+  tickProgress(sim);
 }
 
 export function nearestNpc(sim: Sim): Actor | null {

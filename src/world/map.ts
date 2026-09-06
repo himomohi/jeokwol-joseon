@@ -1,6 +1,6 @@
 import type { BiomeId } from "../core/types";
 import { CHUNK, CHUNK_TILES, TILE, chunkKey, worldToChunk, worldToTile } from "../core/coords";
-import { BIOMES, POI, PROPS, type BiomeDef } from "../content/world";
+import { BIOMES, HUBS, POI, PROPS, ROAD_EDGES, hubAt, zoneAt, type BiomeDef, type HubDef } from "../content/world";
 import type { PropDefinition } from "../core/types";
 import { dist } from "../core/math";
 import { fbm, randAt } from "./noise";
@@ -45,39 +45,41 @@ export interface ChunkData {
 
 const poiList = Object.values(POI);
 
-function distToRoad(x: number, y: number): number {
+export function distToRoad(x: number, y: number): number {
   let best = 1e9;
-  const pts = [POI.village, POI.banditCamp, POI.tigerRidge, POI.bamboo, POI.swamp, POI.haunted, POI.snow, POI.river];
-  for (let i = 0; i < pts.length; i++) {
-    for (let j = i + 1; j < pts.length; j++) {
-      const a = pts[i]!;
-      const b = pts[j]!;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const l2 = dx * dx + dy * dy;
-      let t = l2 > 0 ? ((x - a.x) * dx + (y - a.y) * dy) / l2 : 0;
-      t = Math.max(0, Math.min(1, t));
-      const px = a.x + dx * t;
-      const py = a.y + dy * t;
-      const bend = Math.sin(t * 6.2) * 40;
-      const nx = px + (-dy / Math.sqrt(l2 || 1)) * bend * 0.15;
-      const ny = py + (dx / Math.sqrt(l2 || 1)) * bend * 0.15;
-      best = Math.min(best, dist(x, y, nx, ny));
-    }
+  for (const [ak, bk] of ROAD_EDGES) {
+    const a = POI[ak];
+    const b = POI[bk];
+    if (!a || !b) continue;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const l2 = dx * dx + dy * dy;
+    let t = l2 > 0 ? ((x - a.x) * dx + (y - a.y) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const px = a.x + dx * t;
+    const py = a.y + dy * t;
+    const bend = Math.sin(t * 6.2) * 40;
+    const nx = px + (-dy / Math.sqrt(l2 || 1)) * bend * 0.15;
+    const ny = py + (dx / Math.sqrt(l2 || 1)) * bend * 0.15;
+    best = Math.min(best, dist(x, y, nx, ny));
   }
   return best;
 }
 
 export function villageRadius(x: number, y: number): number {
-  return dist(x, y, 0, 0);
+  const h = hubAt(x, y);
+  if (h) return dist(x, y, h.x, h.y);
+  let bd = 1e9;
+  for (const hub of HUBS) bd = Math.min(bd, dist(x, y, hub.x, hub.y));
+  return bd;
 }
 
 export function biomeAt(seed: number, x: number, y: number): BiomeId {
-  const vr = villageRadius(x, y);
-  if (vr < 280) return "village";
-  if (vr < 420 && distToRoad(x, y) < 42) return "village";
+  if (hubAt(x, y)) return "village";
   const road = distToRoad(x, y);
   if (road < 26) return "road";
+  const z = zoneAt(x, y);
+  if (z) return z.biome;
 
   const nx = x / 1400;
   const ny = y / 1400;
@@ -91,15 +93,16 @@ export function biomeAt(seed: number, x: number, y: number): BiomeId {
   const dSwamp = dist(x, y, POI.swamp.x, POI.swamp.y);
   const dBamboo = dist(x, y, POI.bamboo.x, POI.bamboo.y);
   const dRiver = dist(x, y, POI.river.x, POI.river.y);
+  const dVillage = dist(x, y, POI.village.x, POI.village.y);
 
   if (dHaunt < 520 || (haunt > 0.28 && dHaunt < 900)) return "haunted";
-  if (dSnow < 620 || (elev > 0.28 && temp < -0.15)) return "snow";
+  if (dSnow < 620 || (elev > 0.28 && temp < -0.15 && dSnow < 1400)) return "snow";
   if (dSwamp < 540 || (moist > 0.22 && elev < -0.1 && dSwamp < 1100)) return "swamp";
   if (dBamboo < 520) return "bamboo";
-  if (dRiver < 380 || (moist > 0.18 && Math.abs(y - POI.river.y) < 220)) return "riverside";
-  if (elev > 0.08 || dist(x, y, POI.tigerRidge.x, POI.tigerRidge.y) < 700) return "mountain";
-  if (vr < 1400) return "hanyang";
-  if (moist > 0.1) return "bamboo";
+  if (dRiver < 380 || (moist > 0.18 && Math.abs(y - POI.river.y) < 220 && dRiver < 900)) return "riverside";
+  if (elev > 0.08 && dist(x, y, POI.mountain.x, POI.mountain.y) < 900) return "mountain";
+  if (dVillage < 1200) return "hanyang";
+  if (moist > 0.1 && x > 2400) return "bamboo";
   return "hanyang";
 }
 
@@ -123,9 +126,19 @@ export function biomeColor(seed: number, x: number, y: number): string {
   return r > 0.55 ? a.grass2 : a.grass;
 }
 
-function villageLayout(seed: number): PropInst[] {
-  const items: PropInst[] = [];
-  const placed: { def: PropDefinition; x: number; y: number }[] = [
+function pushPlaced(seed: number, prefix: string, ox: number, oy: number, placed: { def: PropDefinition; x: number; y: number }[]): PropInst[] {
+  return placed.map((p) => ({
+    id: `${prefix}_${p.def.id}_${p.x}_${p.y}`,
+    def: p.def,
+    x: ox + p.x,
+    y: oy + p.y,
+    variant: randAt((ox + p.x) | 0, (oy + p.y) | 0, seed, 9),
+    roof: p.def.roof,
+  }));
+}
+
+function villageLayout(seed: number, hub: HubDef): PropInst[] {
+  return pushPlaced(seed, hub.id, hub.x, hub.y, [
     { def: PROPS.gate!, x: 0, y: 210 },
     { def: PROPS.shop!, x: -120, y: -20 },
     { def: PROPS.house!, x: 130, y: -10 },
@@ -136,11 +149,41 @@ function villageLayout(seed: number): PropInst[] {
     { def: PROPS.lantern!, x: -70, y: 90 },
     { def: PROPS.lantern!, x: 80, y: 90 },
     { def: PROPS.lantern!, x: 20, y: -70 },
-  ];
-  for (const p of placed) {
-    items.push({ id: `v_${p.def.id}_${p.x}_${p.y}`, def: p.def, x: p.x, y: p.y, variant: randAt(p.x | 0, p.y | 0, seed, 9), roof: p.def.roof });
-  }
-  return items;
+  ]);
+}
+
+function hansungLayout(seed: number, hub: HubDef): PropInst[] {
+  return pushPlaced(seed, hub.id, hub.x, hub.y, [
+    { def: PROPS.gate!, x: -280, y: 8 },
+    { def: PROPS.gate!, x: 270, y: 8 },
+    { def: PROPS.shop!, x: -120, y: 16 },
+    { def: PROPS.house!, x: 120, y: 20 },
+    { def: PROPS.house!, x: -40, y: 130 },
+    { def: PROPS.shrine!, x: 100, y: -150 },
+    { def: PROPS.house!, x: -200, y: 90 },
+    { def: PROPS.house!, x: 160, y: 110 },
+    { def: PROPS.house!, x: -90, y: -40 },
+    { def: PROPS.tent!, x: 260, y: 36 },
+    { def: PROPS.lantern!, x: -60, y: 70 },
+    { def: PROPS.lantern!, x: 80, y: 70 },
+    { def: PROPS.lantern!, x: 20, y: -80 },
+    { def: PROPS.lantern!, x: -160, y: -20 },
+  ]);
+}
+
+function campLayout(seed: number, hub: HubDef): PropInst[] {
+  return pushPlaced(seed, hub.id, hub.x, hub.y, [
+    { def: PROPS.tent!, x: -28, y: -8 },
+    { def: PROPS.tent!, x: 32, y: 10 },
+    { def: PROPS.campfire!, x: 0, y: 6 },
+    { def: PROPS.lantern!, x: -18, y: 28 },
+  ]);
+}
+
+function hubLayout(seed: number, hub: HubDef): PropInst[] {
+  if (hub.layout === "hansung") return hansungLayout(seed, hub);
+  if (hub.layout === "camp") return campLayout(seed, hub);
+  return villageLayout(seed, hub);
 }
 
 function propForBiome(b: BiomeId): PropDefinition[] {
@@ -163,20 +206,25 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
     }
   }
 
-  if (cx === 0 && cy === 0) {
-    props.push(...villageLayout(seed));
+  for (const hub of HUBS) {
+    if (Math.abs(hub.x - (ox + CHUNK * 0.5)) > hub.r + CHUNK * 0.6) continue;
+    if (Math.abs(hub.y - (oy + CHUNK * 0.5)) > hub.r + CHUNK * 0.6) continue;
+    for (const p of hubLayout(seed, hub)) {
+      if (worldToChunk(p.x) === cx && worldToChunk(p.y) === cy) props.push(p);
+    }
   }
 
-  for (let i = 0; i < 18; i++) {
+  const extraRocks = zoneAt(ox + CHUNK * 0.5, oy + CHUNK * 0.5)?.id === "pass" ? 10 : 0;
+  for (let i = 0; i < 18 + extraRocks; i++) {
     const u = randAt(cx, cy, seed, 100 + i);
     const v = randAt(cx, cy, seed, 200 + i);
     const x = ox + u * CHUNK;
     const y = oy + v * CHUNK;
     const b = biomeAt(seed, x, y);
-    if (b === "village" && dist(x, y, 0, 0) < 260) continue;
-    const cands = propForBiome(b);
+    if (hubAt(x, y)) continue;
+    const cands = extraRocks && i >= 18 ? [PROPS.rock!] : propForBiome(b);
     if (!cands.length) continue;
-    if (randAt(cx, cy, seed, 300 + i) > (b === "village" ? 0.3 : 0.62)) continue;
+    if (randAt(cx, cy, seed, 300 + i) > (b === "village" ? 0.3 : extraRocks && i >= 18 ? 0.35 : 0.62)) continue;
     const def = cands[Math.floor(randAt(cx, cy, seed, 400 + i) * cands.length)]!;
     const inst: PropInst = {
       id: `p_${cx}_${cy}_${i}`,
