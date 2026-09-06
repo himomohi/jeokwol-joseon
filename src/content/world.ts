@@ -127,6 +127,104 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     spawnDensity: 0.12,
     families: ["military"],
   },
+  hanseong_alley: {
+    id: "hanseong_alley",
+    name: "한성 골목",
+    grass: PAL.earth_dark,
+    grass2: PAL.shadow_navy,
+    dirt: PAL.earth_mid,
+    deco: PAL.env_mid,
+    ambient: PAL.earth_mid,
+    fog: rgba(PAL.bg_void, 0.1),
+    spawnDensity: 0.5,
+    families: ["bandit", "undead"],
+  },
+  jirisan_forest: {
+    id: "jirisan_forest",
+    name: "지리산 숲",
+    grass: PAL.moss_cool,
+    grass2: PAL.env_mid,
+    dirt: PAL.earth_dark,
+    deco: PAL.moss_cool,
+    ambient: PAL.moss_cool,
+    fog: rgba(PAL.env_mid, 0.14),
+    spawnDensity: 0.78,
+    families: ["beast", "spirit", "wildlife"],
+  },
+  ghost_palace: {
+    id: "ghost_palace",
+    name: "원혼 궁궐",
+    grass: PAL.bg_void,
+    grass2: PAL.shadow_navy,
+    dirt: PAL.earth_dark,
+    deco: PAL.env_mid,
+    ambient: PAL.earth_mid,
+    fog: rgba(PAL.shadow_navy, 0.3),
+    spawnDensity: 0.88,
+    families: ["undead", "spirit", "shrine"],
+  },
+  west_coast_mudflat: {
+    id: "west_coast_mudflat",
+    name: "서해 갯벌",
+    grass: PAL.earth_dark,
+    grass2: PAL.env_cool,
+    dirt: PAL.earth_mid,
+    deco: PAL.moss_cool,
+    ambient: PAL.env_cool,
+    fog: rgba(PAL.shadow_navy, 0.12),
+    water: PAL.env_cool,
+    spawnDensity: 0.62,
+    families: ["swamp", "wildlife", "spirit"],
+  },
+  northern_frontier: {
+    id: "northern_frontier",
+    name: "북방 변새",
+    grass: PAL.ui_steel,
+    grass2: PAL.bone_light,
+    dirt: PAL.env_cool,
+    deco: PAL.env_mid,
+    ambient: PAL.bone_light,
+    fog: rgba(PAL.bone_light, 0.12),
+    spawnDensity: 0.52,
+    families: ["beast", "military", "wildlife"],
+  },
+  jeju_lava_field: {
+    id: "jeju_lava_field",
+    name: "제주 화산지",
+    grass: PAL.earth_dark,
+    grass2: PAL.shadow_navy,
+    dirt: PAL.earth_mid,
+    deco: PAL.metal_dark,
+    ambient: PAL.earth_mid,
+    fog: rgba(PAL.bg_void, 0.16),
+    spawnDensity: 0.7,
+    families: ["dokkaebi", "shrine", "beast"],
+  },
+  shaman_marsh: {
+    id: "shaman_marsh",
+    name: "무당 늪",
+    grass: PAL.env_mid,
+    grass2: PAL.shadow_navy,
+    dirt: PAL.earth_dark,
+    deco: PAL.moss_cool,
+    ambient: PAL.moss_cool,
+    fog: rgba(PAL.bg_void, 0.24),
+    water: PAL.shadow_navy,
+    spawnDensity: 0.86,
+    families: ["swamp", "spirit"],
+  },
+  thunder_ridge: {
+    id: "thunder_ridge",
+    name: "뇌령",
+    grass: PAL.env_cool,
+    grass2: PAL.earth_dark,
+    dirt: PAL.shadow_navy,
+    deco: PAL.env_mid,
+    ambient: PAL.env_cool,
+    fog: rgba(PAL.shadow_navy, 0.18),
+    spawnDensity: 0.72,
+    families: ["dokkaebi", "spirit", "bandit"],
+  },
 };
 
 export const PROPS: Record<string, PropDefinition> = {
@@ -263,6 +361,52 @@ export const LOOT_TABLES: Record<string, { w: number; itemId: string; qty: numbe
   ],
 };
 
+LOOT_TABLES.loot_hanseong_alley = LOOT_TABLES.loot_bandit!;
+LOOT_TABLES.loot_jirisan = LOOT_TABLES.loot_beast!;
+LOOT_TABLES.loot_ghost_palace = LOOT_TABLES.loot_undead_rare!;
+LOOT_TABLES.loot_mudflat = LOOT_TABLES.loot_swamp!;
+LOOT_TABLES.loot_frontier = LOOT_TABLES.loot_military!;
+LOOT_TABLES.loot_jeju = LOOT_TABLES.loot_dok!;
+LOOT_TABLES.loot_marsh = LOOT_TABLES.loot_swamp_rare!;
+LOOT_TABLES.loot_ridge = LOOT_TABLES.loot_spirit!;
+LOOT_TABLES.loot_palace = LOOT_TABLES.loot_shrine!;
+LOOT_TABLES.loot_elite = LOOT_TABLES.loot_bandit_rare!;
+
+/** Coordinator catalog loot IDs (20). Extra sim boss/family tables stay in LOOT_TABLES. */
+export const CATALOG_LOOT_IDS = [
+  "loot_hanseong_alley",
+  "loot_jirisan",
+  "loot_ghost_palace",
+  "loot_mudflat",
+  "loot_frontier",
+  "loot_jeju",
+  "loot_marsh",
+  "loot_ridge",
+  "loot_palace",
+  "loot_elite",
+  "loot_bandit",
+  "loot_beast",
+  "loot_dok",
+  "loot_spirit",
+  "loot_undead",
+  "loot_military",
+  "loot_wild",
+  "loot_swamp",
+  "loot_shrine",
+  "loot_boss_bandit",
+] as const;
+
+export const CATALOG_BIOME_IDS = [
+  "hanseong_alley",
+  "jirisan_forest",
+  "ghost_palace",
+  "west_coast_mudflat",
+  "northern_frontier",
+  "jeju_lava_field",
+  "shaman_marsh",
+  "thunder_ridge",
+] as const;
+
 export interface NpcDef {
   id: string;
   name: string;
@@ -312,6 +456,8 @@ export const NPCS: NpcDef[] = [
   { id: "camp_ferry", name: "뱃사공", role: "flavor", x: 2680, y: -700, lines: ["강을 따라 병기창이 있다. 신기전의 연기가 난다.", "나루에서 쉬어 가게."] },
   { id: "camp_hermit", name: "암자 노승", role: "flavor", x: 5804, y: 236, lines: ["폐사 너머 원혼대승이 앉았다. 균열은 더 동녘이다.", "암자 마루에서 한기를 떨구거라."] },
 ];
+
+export const TRAINERS = NPCS.filter((n) => n.role === "trainer");
 
 export type SpawnFamily = "pest" | "bandit" | "bamboo" | "river" | "swamp" | "mountain" | "snow" | "wraith";
 

@@ -13,6 +13,9 @@ console.log("REVIEW", JSON.stringify(r));
 if (!r.ok) throw new Error(r.notes.join(", "));
 if (POI.banditBoss.boss !== "boss_bandit") throw new Error("산적두목 경로가 없다");
 if (!ENEMY_BY_ID.bandit_thug || !ENEMY_BY_ID.boss_bandit) throw new Error("산적 카탈로그 ID가 없다");
+if (r.jobs !== 18 || r.adv !== 12) throw new Error(`직 규모 ${r.jobs}/${r.adv}`);
+if (r.skills < 96) throw new Error(`초식 ${r.skills} < 96`);
+if (r.biomes < 8) throw new Error(`바이옴 ${r.biomes} < 8`);
 
 function warp(sim: Sim, x: number, y: number, n = 16): void {
   sim.mode = "play";

@@ -1,24 +1,36 @@
 export type JobId =
   | "musa"
   | "gungsoo"
+  | "gungsa"
   | "dosa"
   | "uiwon"
   | "dojeok"
   | "gibyeong"
+  | "seungbyeong"
   | "geomgaek"
   | "changbyeong"
   | "singung"
   | "hwasal"
+  | "singijeonsu"
+  | "baekbal"
   | "sulsa"
   | "bujeoksa"
+  | "cheonmunsa"
+  | "bujuksulsa"
   | "myeongui"
   | "dokgong"
+  | "chimuisa"
+  | "yaksa"
   | "jagaek"
   | "dogul"
+  | "heugui"
+  | "dokgaek"
   | "gichang"
-  | "magung";
+  | "magung"
+  | "geumgangseung"
+  | "yeomhwaseung";
 
-export type BaseJobId = "musa" | "gungsoo" | "dosa" | "uiwon" | "dojeok" | "gibyeong";
+export type BaseJobId = "musa" | "gungsoo" | "gungsa" | "dosa" | "uiwon" | "dojeok" | "gibyeong" | "seungbyeong";
 
 export type EquipSlot = "weapon" | "helm" | "chest" | "legs" | "boots" | "accessory";
 
@@ -37,7 +49,15 @@ export type BiomeId =
   | "snow"
   | "haunted"
   | "road"
-  | "village";
+  | "village"
+  | "hanseong_alley"
+  | "jirisan_forest"
+  | "ghost_palace"
+  | "west_coast_mudflat"
+  | "northern_frontier"
+  | "jeju_lava_field"
+  | "shaman_marsh"
+  | "thunder_ridge";
 
 export type SkillKind =
   | "slash"
@@ -46,6 +66,7 @@ export type SkillKind =
   | "circle"
   | "projectile"
   | "groundAoe"
+  | "ground"
   | "buff"
   | "chain"
   | "heal"

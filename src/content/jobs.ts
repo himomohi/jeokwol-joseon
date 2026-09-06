@@ -478,12 +478,68 @@ export const JOBS: Record<JobId, JobDef> = {
       "mg_rain",
     ],
   },
+} as Record<JobId, JobDef>;
+
+/** Catalog names → sim-canonical job IDs. Lookup still lives on JOBS. */
+export const JOB_ALIASES: Partial<Record<JobId, JobId>> = {
+  gungsa: "gungsoo",
+  seungbyeong: "gibyeong",
+  singijeonsu: "hwasal",
+  baekbal: "singung",
+  cheonmunsa: "sulsa",
+  bujuksulsa: "bujeoksa",
+  heugui: "jagaek",
+  dokgaek: "dokgong",
+  chimuisa: "myeongui",
+  yaksa: "dokgong",
+  geumgangseung: "gichang",
+  yeomhwaseung: "magung",
 };
+
+function aliasJob(id: JobId, from: JobId, name: string): void {
+  JOBS[id] = { ...JOBS[from], id, name };
+}
+
+aliasJob("gungsa", "gungsoo", "궁사");
+aliasJob("seungbyeong", "gibyeong", "승병");
+aliasJob("singijeonsu", "hwasal", "신기전수");
+aliasJob("baekbal", "singung", "백발");
+aliasJob("cheonmunsa", "sulsa", "천문사");
+aliasJob("bujuksulsa", "bujeoksa", "부적술사");
+aliasJob("heugui", "jagaek", "흑의");
+aliasJob("dokgaek", "dokgong", "독객");
+aliasJob("chimuisa", "myeongui", "침의사");
+aliasJob("yaksa", "dokgong", "약사");
+aliasJob("geumgangseung", "gichang", "금강승");
+aliasJob("yeomhwaseung", "magung", "염화승");
 
 export const BASE_JOBS: BaseJobId[] = ["musa", "gungsoo", "dosa", "uiwon", "dojeok", "gibyeong"];
 
+/** Playable jobs excluding catalog aliases: 6 base + 12 advance. */
+export const CANONICAL_JOB_IDS: JobId[] = [
+  "musa",
+  "gungsoo",
+  "dosa",
+  "uiwon",
+  "dojeok",
+  "gibyeong",
+  "geomgaek",
+  "changbyeong",
+  "singung",
+  "hwasal",
+  "sulsa",
+  "bujeoksa",
+  "myeongui",
+  "dokgong",
+  "jagaek",
+  "dogul",
+  "gichang",
+  "magung",
+];
+
 export function advJobsOf(base: BaseJobId): JobDef[] {
-  return Object.values(JOBS).filter((j) => j.tier === 2 && j.base === base);
+  const resolved = (JOB_ALIASES[base] ?? base) as BaseJobId;
+  return CANONICAL_JOB_IDS.map((id) => JOBS[id]).filter((j) => j.tier === 2 && j.base === resolved);
 }
 
 export function jobById(id: JobId): JobDef {
@@ -681,3 +737,8 @@ export function tooltipFor(s: SkillDef): string {
   if (s.radius) bits.push(`반경 ${s.radius}`);
   return bits.join("\n");
 }
+
+/** 12 advance jobs × 8 forms. Catalog floor is 96; sim keeps base forms too. */
+export const CATALOG_SKILL_IDS: string[] = CANONICAL_JOB_IDS.filter((id) => JOBS[id].tier === 2).flatMap(
+  (id) => JOBS[id].skills,
+);

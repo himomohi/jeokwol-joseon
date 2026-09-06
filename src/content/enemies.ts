@@ -152,18 +152,139 @@ const ENEMY_ALIASES: Record<string, string> = {
   bandit_thug: "bandit_foot",
   bandit_slinger: "bandit_bow",
   elite_bandit_chief: "boss_bandit",
+  wild_boar: "boar",
+  mountain_wolf: "wolf",
+  elite_white_tiger: "white_tiger",
+  deserter_spearman: "bandit_deserter",
+  black_bear: "bear",
+  will_o_wisp_ko: "dok_fireball",
+  elite_mud_shaman: "plague_witch",
+  rice_thief_rat: "plague_rat",
+  gumiho_cub: "fox_spirit",
+  tomb_bone_soldier: "skel_soldier",
+  boss_sangu_baekho: "boss_tiger",
+  boss_gumiho_seolhwa: "boss_gumiho",
+  boss_mangjang_mukcheol: "boss_abbot",
+  boss_imugi_cheoryong: "boss_imugi",
+  boss_heukmudang_dari: "boss_wraith",
 };
 
-export const ENEMY_BY_ID: Record<string, EnemyDef> = {
-  ...Object.fromEntries(ENEMIES.map((e) => [e.id, e])),
-  ...Object.fromEntries(
-    Object.entries(ENEMY_ALIASES).map(([alias, id]) => {
-      const def = ENEMIES.find((e) => e.id === id);
-      if (!def) throw new Error(`없는 적 별칭 ${alias}→${id}`);
-      return [alias, def];
-    }),
-  ),
-};
+const CATALOG_UNIQUE: { id: string; from: string; name: string; loot?: string; art?: string; biomes?: BiomeId[] }[] = [
+  { id: "alley_ghost", from: "wonhon", name: "골목원혼", loot: "loot_hanseong_alley", biomes: ["hanyang", "village", "hanseong_alley"] },
+  { id: "pickpocket_spirit", from: "fox_spirit", name: "소매치기령", loot: "loot_spirit", biomes: ["hanyang", "hanseong_alley"] },
+  { id: "tree_sprit", from: "sansin", name: "나무정령", loot: "loot_jirisan", biomes: ["bamboo", "jirisan_forest"] },
+  { id: "herb_golem", from: "stone_guard", name: "약초골렘", loot: "loot_shrine", art: "statue", biomes: ["bamboo", "jirisan_forest"] },
+  { id: "palace_maid_ghost", from: "virgin_ghost", name: "궁녀원혼", loot: "loot_ghost_palace", biomes: ["haunted", "ghost_palace"] },
+  { id: "eunuch_wraith", from: "jeoseung", name: "내시원혼", loot: "loot_ghost_palace", biomes: ["haunted", "ghost_palace"] },
+  { id: "armor_specter", from: "mask_guard", name: "갑주유령", loot: "loot_palace", biomes: ["haunted", "ghost_palace"] },
+  { id: "lament_flute_spirit", from: "moon_spirit", name: "곡적령", loot: "loot_spirit_rare", biomes: ["haunted", "ghost_palace"] },
+  { id: "elite_court_assassin", from: "byeolgam", name: "궁중자객", loot: "loot_elite", biomes: ["hanyang", "hanseong_alley"] },
+  { id: "mud_crab", from: "bug", name: "갯벌게", loot: "loot_mudflat", art: "croc", biomes: ["riverside", "west_coast_mudflat"] },
+  { id: "salt_elemental", from: "wind_sprite", name: "소금정령", loot: "loot_mudflat", biomes: ["riverside", "west_coast_mudflat"] },
+  { id: "drowned_soldier", from: "skel_soldier", name: "익사병사", loot: "loot_undead", biomes: ["riverside", "west_coast_mudflat"] },
+  { id: "elite_tide_priest", from: "plague_witch", name: "조수신관", loot: "loot_spirit_rare", biomes: ["riverside", "west_coast_mudflat"] },
+  { id: "deserter_archer", from: "bandit_bow", name: "탈영궁수", loot: "loot_military", biomes: ["hanyang", "road"] },
+  { id: "elite_border_captain", from: "uigeumbu", name: "변장수", loot: "loot_frontier", biomes: ["snow", "northern_frontier"] },
+  { id: "siege_mokwoo", from: "stone_guard", name: "공성목우", loot: "loot_military_rare", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "lava_scarab", from: "bug", name: "용암풍뎅이", loot: "loot_jeju", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "ember_sprit", from: "dok_fire", name: "불씨정령", loot: "loot_jeju", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "basalt_golem", from: "stone_guard", name: "현무암골렘", loot: "loot_shrine", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "ash_hound", from: "wolf", name: "재개", loot: "loot_beast", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "elite_harubang_warden", from: "mask_guard", name: "돌하르방", loot: "loot_shrine", biomes: ["mountain", "jeju_lava_field"] },
+  { id: "curse_doll", from: "dok_trick", name: "저주인형", loot: "loot_marsh", biomes: ["swamp", "shaman_marsh"] },
+  { id: "poison_toad", from: "viper", name: "독두꺼비", loot: "loot_swamp", biomes: ["swamp", "shaman_marsh"] },
+  { id: "paper_talon_spirit", from: "wind_sprite", name: "지발령", loot: "loot_ridge", biomes: ["mountain", "thunder_ridge"] },
+  { id: "storm_hawk", from: "eagle", name: "폭풍수리", loot: "loot_ridge", biomes: ["mountain", "thunder_ridge"] },
+  { id: "thunder_sprite", from: "dok_fireball", name: "뇌령", loot: "loot_dok", biomes: ["mountain", "thunder_ridge"] },
+  { id: "ridge_bandit_raider", from: "bandit_road", name: "능선산적", loot: "loot_bandit", biomes: ["mountain", "thunder_ridge"] },
+  { id: "cloud_serpent_hatchling", from: "imugi", name: "구름뱀새끼", loot: "loot_spirit", biomes: ["mountain", "thunder_ridge"] },
+  { id: "elite_storm_monk", from: "dok_iron", name: "뇌승", loot: "loot_dok", biomes: ["mountain", "thunder_ridge"] },
+  { id: "singijeon_drone", from: "crows", name: "신기전", loot: "loot_military", art: "bird", biomes: ["hanyang", "riverside"] },
+  { id: "night_watch_corrupt", from: "pojol", name: "타락순라", loot: "loot_military", biomes: ["hanyang", "hanseong_alley"] },
+  { id: "boss_palace_queen", from: "boss_gumiho", name: "궁중여왕혼", loot: "loot_boss_gumiho", biomes: ["haunted", "ghost_palace"] },
+  { id: "boss_harubang_jowang", from: "boss_abbot", name: "돌하르방 조왕", loot: "loot_boss_abbot", biomes: ["mountain", "jeju_lava_field"] },
+];
+
+export const CATALOG_MONSTER_IDS = [
+  "bandit_thug",
+  "bandit_slinger",
+  "stray_dog",
+  "alley_ghost",
+  "pickpocket_spirit",
+  "wild_boar",
+  "mountain_wolf",
+  "tree_sprit",
+  "forest_spider",
+  "elite_white_tiger",
+  "herb_golem",
+  "palace_maid_ghost",
+  "eunuch_wraith",
+  "armor_specter",
+  "lament_flute_spirit",
+  "elite_court_assassin",
+  "mud_crab",
+  "water_ghost",
+  "salt_elemental",
+  "drowned_soldier",
+  "elite_tide_priest",
+  "deserter_spearman",
+  "deserter_archer",
+  "black_bear",
+  "frost_wolf",
+  "elite_border_captain",
+  "siege_mokwoo",
+  "lava_scarab",
+  "ember_sprit",
+  "basalt_golem",
+  "ash_hound",
+  "elite_harubang_warden",
+  "marsh_leech",
+  "curse_doll",
+  "will_o_wisp_ko",
+  "poison_toad",
+  "elite_mud_shaman",
+  "paper_talon_spirit",
+  "storm_hawk",
+  "thunder_sprite",
+  "ridge_bandit_raider",
+  "cloud_serpent_hatchling",
+  "elite_storm_monk",
+  "singijeon_drone",
+  "night_watch_corrupt",
+  "rice_thief_rat",
+  "gumiho_cub",
+  "tomb_bone_soldier",
+  "elite_bandit_chief",
+  "mirror_shade",
+  "boss_sangu_baekho",
+  "boss_palace_queen",
+  "boss_gumiho_seolhwa",
+  "boss_mangjang_mukcheol",
+  "boss_heukmudang_dari",
+  "boss_imugi_cheoryong",
+  "boss_harubang_jowang",
+] as const;
+
+export const ENEMY_BY_ID: Record<string, EnemyDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
+
+for (const [alias, id] of Object.entries(ENEMY_ALIASES)) {
+  const def = ENEMY_BY_ID[id];
+  if (!def) throw new Error(`없는 적 별칭 ${alias}→${id}`);
+  ENEMY_BY_ID[alias] = def;
+}
+
+for (const row of CATALOG_UNIQUE) {
+  const src = ENEMY_BY_ID[row.from];
+  if (!src) throw new Error(`없는 원형 ${row.from}`);
+  ENEMY_BY_ID[row.id] = {
+    ...src,
+    id: row.id,
+    name: row.name,
+    loot: row.loot ?? src.loot,
+    art: row.art ?? src.art,
+    biomes: row.biomes ?? src.biomes,
+  };
+}
 
 export const GRADE_MOD: Record<Grade, { hp: number; atk: number; xp: number; name: string }> = {
   ha: { hp: 1, atk: 1, xp: 1, name: "일반" },

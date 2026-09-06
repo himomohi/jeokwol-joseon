@@ -1,7 +1,7 @@
-import { ENEMIES } from "../content/enemies";
-import { SKILLS, JOBS } from "../content/jobs";
+import { CATALOG_MONSTER_IDS, ENEMIES, ENEMY_BY_ID } from "../content/enemies";
+import { CANONICAL_JOB_IDS, CATALOG_SKILL_IDS, JOB_ALIASES, JOBS, SKILLS } from "../content/jobs";
 import { ITEMS } from "../content/items";
-import { BIOMES, HUBS, NPCS, POI, ROAD_EDGES, ZONES } from "../content/world";
+import { BIOMES, CATALOG_BIOME_IDS, CATALOG_LOOT_IDS, HUBS, LOOT_TABLES, NPCS, POI, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
 import { ART_PIPELINE } from "../art/cache";
@@ -32,7 +32,7 @@ export interface ReviewReport {
 }
 
 export function reviewContent(): ReviewReport {
-  const jobs = Object.values(JOBS);
+  const jobs = CANONICAL_JOB_IDS.map((id) => JOBS[id]);
   const adv = jobs.filter((j) => j.tier === 2);
   let min = 99;
   for (const j of adv) min = Math.min(min, j.skills.length);
@@ -42,9 +42,27 @@ export function reviewContent(): ReviewReport {
   if (jobs.filter((j) => j.tier === 1).length < 6) notes.push("기본 직이 6개 미만");
   if (adv.length < 12) notes.push("전직이 12개 미만");
   if (min < 8) notes.push("전직 스킬이 8개 미만인 길 있음");
+  if (CATALOG_SKILL_IDS.length < 96) notes.push(`카탈로그 초식 ${CATALOG_SKILL_IDS.length} < 96`);
+  for (const id of CATALOG_SKILL_IDS) {
+    if (!SKILLS[id]) notes.push(`없는 카탈로그 초식 ${id}`);
+  }
+  for (const [alias, from] of Object.entries(JOB_ALIASES)) {
+    if (!from || !JOBS[alias as keyof typeof JOBS] || JOBS[from] == null) notes.push(`직 별칭 ${alias} 누락`);
+  }
   if (enemies.length < 48) notes.push(`적 원형 ${enemies.length} < 48`);
   if (bosses.length < 6) notes.push("보스 6 미만");
+  if (CATALOG_MONSTER_IDS.length < 57) notes.push(`카탈로그 몬스터 ${CATALOG_MONSTER_IDS.length} < 57`);
+  for (const id of CATALOG_MONSTER_IDS) {
+    if (!ENEMY_BY_ID[id]) notes.push(`카탈로그 몬스터 ${id} 누락`);
+  }
   if (Object.keys(BIOMES).length < 7) notes.push("바이옴 부족");
+  for (const id of CATALOG_BIOME_IDS) {
+    if (!BIOMES[id]) notes.push(`카탈로그 바이옴 ${id} 누락`);
+  }
+  if (CATALOG_LOOT_IDS.length < 20) notes.push(`카탈로그 루트 ${CATALOG_LOOT_IDS.length} < 20`);
+  for (const id of CATALOG_LOOT_IDS) {
+    if (!LOOT_TABLES[id]?.length) notes.push(`카탈로그 루트 ${id} 누락`);
+  }
   if (HUBS.length < 5) notes.push("거점 5 미만");
   if (ROAD_EDGES.length < 8) notes.push("도로 줄기 부족");
   if (ZONES.length < 8) notes.push("존 테이블 부족");

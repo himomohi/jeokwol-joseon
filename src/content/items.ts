@@ -69,11 +69,11 @@ function c(id: string, name: string, heal: number, mp: number, value: number, fo
 }
 
 const swordJobs: JobId[] = ["musa", "geomgaek"];
-const spearJobs: JobId[] = ["musa", "changbyeong", "gibyeong", "gichang"];
-const bowJobs: JobId[] = ["gungsoo", "singung", "hwasal", "gibyeong", "magung"];
-const daggerJobs: JobId[] = ["dojeok", "jagaek", "dogul"];
-const talJobs: JobId[] = ["dosa", "bujeoksa", "sulsa"];
-const staffJobs: JobId[] = ["dosa", "sulsa", "uiwon", "myeongui", "dokgong"];
+const spearJobs: JobId[] = ["musa", "changbyeong", "gibyeong", "gichang", "seungbyeong", "geumgangseung"];
+const bowJobs: JobId[] = ["gungsoo", "gungsa", "singung", "hwasal", "baekbal", "singijeonsu", "gibyeong", "magung", "yeomhwaseung"];
+const daggerJobs: JobId[] = ["dojeok", "jagaek", "dogul", "heugui", "dokgaek"];
+const talJobs: JobId[] = ["dosa", "bujeoksa", "sulsa", "cheonmunsa", "bujuksulsa"];
+const staffJobs: JobId[] = ["dosa", "sulsa", "uiwon", "myeongui", "dokgong", "chimuisa", "yaksa", "cheonmunsa"];
 
 export const ITEMS: Record<string, ItemRecipe> = {};
 
@@ -167,10 +167,12 @@ put({
 export const STARTER_WEAPON: Record<string, string> = {
   musa: "sword_rusty",
   gungsoo: "bow_oak",
+  gungsa: "bow_oak",
   dosa: "tal_paper",
   uiwon: "staff_oak",
   dojeok: "dagger_iron",
   gibyeong: "spear_wood",
+  seungbyeong: "spear_wood",
 };
 
 export const STARTER_CHEST = "chest_hanbok";

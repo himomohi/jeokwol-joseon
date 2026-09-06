@@ -796,6 +796,7 @@ function execSkill(sim: Sim, actor: Actor, skill: SkillDef): void {
     case "projectile":
       spawnProj(sim, actor, skill, atk, crit);
       break;
+    case "ground":
     case "groundAoe": {
       const range = skill.range || 160;
       let ax = sim.aimX;
