@@ -1,0 +1,34 @@
+name: Verify expansion
+on:
+  push:
+    branches: [work/red-moon-expansion]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test --if-present
+      - name: Package source for local verification
+        if: always()
+        run: |
+          mkdir -p /tmp/jeokwol-package
+          git archive HEAD | tar -x -C /tmp/jeokwol-package
+          if [ -d dist ]; then cp -r dist /tmp/jeokwol-package/dist; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jeokwol-source-build
+          path: /tmp/jeokwol-package/
+          include-hidden-files: true
+          retention-days: 7
