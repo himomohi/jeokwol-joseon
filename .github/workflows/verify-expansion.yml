@@ -1,0 +1,32 @@
+name: Verify expansion
+on:
+  push:
+    branches: [codex/expansion-20260906]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build and existing simulation checks
+        run: |
+          mkdir -p verification
+          npm run build 2>&1 | tee verification/build.txt
+          npm run smoke 2>&1 | tee verification/smoke.txt
+          npm run guide 2>&1 | tee verification/guide.txt
+      - name: Package exact source and dependencies for offline verification
+        if: always()
+        run: tar --exclude=.git --exclude=./verification/source-and-build.tar.gz -czf /tmp/source-and-build.tar.gz . && cp /tmp/source-and-build.tar.gz verification/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: expansion-source-and-build
+          path: verification/
+          retention-days: 3
