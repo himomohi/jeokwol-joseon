@@ -107,6 +107,7 @@ function frame(tms: number): void {
       step(sim, dt);
       renderer.particles.step(dt);
       onEvents();
+      sim.events.length = 0;
     },
     (alpha) => {
       if (lastMode !== sim.mode && sim.mode === "play") {

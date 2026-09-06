@@ -1,7 +1,7 @@
 import { ENEMIES } from "../content/enemies";
 import { SKILLS, JOBS } from "../content/jobs";
 import { ITEMS } from "../content/items";
-import { BIOMES, HUBS, NPCS, ROAD_EDGES, ZONES } from "../content/world";
+import { BIOMES, HUBS, NPCS, POI, ROAD_EDGES, ZONES } from "../content/world";
 import { TerrainCache, biomeAt } from "../world/map";
 import { MAT } from "../art/materials";
 import {
@@ -56,6 +56,8 @@ export function reviewContent(): ReviewReport {
   const b = biomeAt(12345, 80, 90);
   const cacheStable = a === b && cache.size() <= 4;
   if (!cacheStable) notes.push("청크 캐시/시드 불일치");
+  if (ROAD_EDGES.every((e) => e[0] !== "banditCamp" || e[1] !== "banditBoss")) notes.push("산적야영→두목 도로 없음");
+  if (POI.banditBoss?.boss !== "boss_bandit") notes.push("산적두목 POI 없음");
   const missingSkills = Object.values(JOBS).flatMap((j) => j.skills).filter((id) => !SKILLS[id]);
   if (missingSkills.length) notes.push(`없는 초식 ${missingSkills.length}`);
   reviewPalette(notes);

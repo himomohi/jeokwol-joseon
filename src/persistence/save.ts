@@ -1,19 +1,30 @@
 import type { SaveBlob } from "../world/sim";
 
 const PREFIX = "jeokwol.slot.";
+const mem = new Map<string, string>();
 
-function storage(): Storage | null {
+type Store = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+};
+
+function storage(): Store {
   try {
-    if (typeof localStorage === "undefined") return null;
-    return localStorage;
+    const ls = (globalThis as { localStorage?: Store }).localStorage;
+    if (ls) return ls;
   } catch {
-    return null;
+    /* Node / blocked storage */
   }
+  return {
+    getItem: (key) => mem.get(key) ?? null,
+    setItem: (key, value) => {
+      mem.set(key, value);
+    },
+  };
 }
 
 export function saveSlot(slot: number, blob: SaveBlob): { ok: boolean; reason?: string } {
   const ls = storage();
-  if (!ls) return { ok: false, reason: "이 환경에서는 저장할 수 없다" };
   try {
     const json = JSON.stringify(blob);
     if (json.length > 4_500_000) return { ok: false, reason: "기록이 너무 크다" };
@@ -28,7 +39,6 @@ export function saveSlot(slot: number, blob: SaveBlob): { ok: boolean; reason?: 
 
 export function loadSlot(slot: number): { ok: true; blob: SaveBlob } | { ok: false; reason: string } {
   const ls = storage();
-  if (!ls) return { ok: false, reason: "이 환경에서는 저장할 수 없다" };
   try {
     const raw = ls.getItem(PREFIX + slot);
     if (!raw) return { ok: false, reason: "빈 자리" };

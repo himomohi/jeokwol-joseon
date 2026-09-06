@@ -166,7 +166,8 @@ export type SimEvent =
   | { type: "message"; text: string; kind: "info" | "warn" | "loot" | "skill" }
   | { type: "skillUsed"; skillId: string }
   | { type: "webglLost" }
-  | { type: "webglRestored" };
+  | { type: "webglRestored" }
+  | { type: "ending" };
 
 export interface ItemInstance {
   instId: string;

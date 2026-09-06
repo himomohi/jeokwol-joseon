@@ -4,8 +4,8 @@ import { NPCS, POI, BIOMES } from "../content/world";
 import type { BaseJobId, JobId } from "../core/types";
 import { TILE } from "../core/coords";
 import type { Sim } from "../world/sim";
-import { applySave, handleCommand, liveStats, nearestNpc, snapshot, xpNeed } from "../world/sim";
-import { loadSlot, saveSlot, slotInfo } from "../persistence/save";
+import { handleCommand, liveStats, nearestNpc, xpNeed } from "../world/sim";
+import { slotInfo } from "../persistence/save";
 import { iconSvg } from "../art/icons";
 import { biomeAt } from "../world/map";
 import { reviewContent } from "../review/verify";
@@ -34,8 +34,22 @@ export function renderUi(root: HTMLElement, sim: Sim, ui: UiState, extra: { fps:
 
   if (sim.mode === "title") {
     hud.hidden = true;
-    overlay.innerHTML = titleHtml(ui);
+    overlay.innerHTML = titleHtml(ui, sim.saveHint);
     bindTitle(overlay, sim, ui);
+    return;
+  }
+
+  if (sim.mode === "ending") {
+    hud.hidden = true;
+    overlay.innerHTML = `<div class="overlay"><div class="card"><h1>적월이 갈라지다</h1>
+      <p>원혼대승을 잠재우고 균열을 밟았다. 핏빛 달이 한 조각 떨어진다. 행적은 기록할 수 있다.</p>
+      <div class="row"><button data-save>저장</button><button data-title>표지로</button></div>
+      <p>${sim.saveHint ?? ""}</p></div></div>`;
+    overlay.querySelector("[data-save]")?.addEventListener("click", () => doSave(sim));
+    overlay.querySelector("[data-title]")?.addEventListener("click", () => {
+      sim.mode = "title";
+      sim.paused = false;
+    });
     return;
   }
 
@@ -93,9 +107,10 @@ export function renderUi(root: HTMLElement, sim: Sim, ui: UiState, extra: { fps:
       <div class="row"><button data-rest>거점에서 일어난다</button></div></div></div>`;
     overlay.querySelector("[data-rest]")?.addEventListener("click", () => handleCommand(sim, { type: "rest" }));
   }
+
 }
 
-function titleHtml(ui: UiState): string {
+function titleHtml(ui: UiState, hint?: string): string {
   const jobs = BASE_JOBS.map((id) => `<button data-job="${id}" class="${ui.job === id ? "" : "ghost"}">${JOBS[id].name}</button>`).join("");
   const slots = [0, 1, 2].map((s) => `<button data-slot="${s}" class="${ui.slot === s ? "" : "ghost"}">${s + 1} · ${slotInfo(s)}</button>`).join("");
   const r = reviewContent();
@@ -110,6 +125,7 @@ function titleHtml(ui: UiState): string {
     <div class="row"><button data-new>새 행적</button><button data-load>불러오기</button></div>
     <p style="font-size:12px">WASD 이동 · 마우스 조준 · 클릭/J 공격 · 1–8 초식 · E 대화 · F 줍기 · I 행낭 · K 초식 · M 지도 · Esc 멈춤 · P 후처리</p>
     <p style="font-size:11px;color:var(--muted)">직 ${r.jobs} · 전직 ${r.adv} · 전직당 최소 초식 ${r.skillsPerAdvMin} · 초식 ${r.skills} · 적 ${r.enemies} · 보스 ${r.bosses} · 물산 ${r.items}${r.ok ? "" : " · " + r.notes.join(", ")}</p>
+    ${hint ? `<p>${hint}</p>` : ""}
   </div></div>`;
 }
 
@@ -131,13 +147,7 @@ function bindTitle(el: Element, sim: Sim, ui: UiState): void {
     handleCommand(sim, { type: "newGame", name: ui.name, job: ui.job, slot: ui.slot });
   });
   el.querySelector("[data-load]")?.addEventListener("click", () => {
-    const r = loadSlot(ui.slot);
-    if (!r.ok) {
-      sim.saveHint = r.reason;
-      return;
-    }
-    applySave(sim, r.blob);
-    sim.events.push({ type: "loaded", slot: ui.slot, ok: true });
+    handleCommand(sim, { type: "load", slot: ui.slot });
   });
 }
 
@@ -299,9 +309,7 @@ function drawBigMap(c: HTMLCanvasElement, sim: Sim): void {
 }
 
 function doSave(sim: Sim): void {
-  const r = saveSlot(sim.slot, snapshot(sim));
-  sim.saveHint = r.ok ? `${sim.slot + 1}자리에 기록했다` : r.reason;
-  sim.events.push({ type: "saved", slot: sim.slot, ok: r.ok, reason: r.reason });
+  handleCommand(sim, { type: "save", slot: sim.slot });
 }
 
 function escapeHtml(s: string): string {

@@ -19,6 +19,7 @@ import { HUBS, LOOT_TABLES, NPCS, POI, SPAWN_FAMILY_TO_ENEMY, hubAt, restHubs, z
 import { addStats } from "../content/jobs";
 import { TerrainCache, biomeAt, distToRoad, type ChunkData, type Solid } from "./map";
 import { pushOut } from "./collision";
+import { loadSlot, saveSlot } from "../persistence/save";
 
 export interface Actor {
   id: string;
@@ -138,7 +139,7 @@ export interface Sim {
   tick: number;
   time: number;
   paused: boolean;
-  mode: "title" | "play" | "dead";
+  mode: "title" | "play" | "dead" | "ending";
   slot: number;
   player: Actor;
   meta: PlayerMeta;
@@ -678,6 +679,7 @@ function kill(sim: Sim, target: Actor, src: Actor | { id: string }): void {
     if (def.id === "boss_abbot") sim.meta.flags.quest_shrine = true;
     if (def.id === "boss_imugi") sim.meta.flags.quest_swamp = true;
     if (def.id === "boss_wraith") sim.meta.flags.quest_wraith = true;
+    maybeEnding(sim);
   }
   if (src.id === "player") gainXp(sim, xp);
   rollLoot(sim, def, target.x, target.y);
@@ -806,7 +808,7 @@ function execSkill(sim: Sim, actor: Actor, skill: SkillDef): void {
         stats: { [skill.stat ?? "atk"]: skill.amount ?? 8 },
       });
       emit(sim, { type: "message", text: `${skill.name} 발동`, kind: "skill" });
-      if (skill.id === "my_cleanse") sim.buffs = sim.buffs.filter((b) => !b.dot);
+      if (skill.id === "my_cleanse" || skill.id === "ui_purge") sim.buffs = sim.buffs.filter((b) => !b.dot);
       break;
     case "chain": {
       let srcX = actor.x;
@@ -1173,6 +1175,26 @@ export function handleCommand(sim: Sim, cmd: Command): void {
       sim.talk = null;
       sim.shopOpen = false;
       break;
+    case "save": {
+      sim.slot = cmd.slot;
+      const r = saveSlot(cmd.slot, snapshot(sim));
+      sim.saveHint = r.ok ? `${cmd.slot + 1}자리에 기록했다` : r.reason;
+      emit(sim, { type: "saved", slot: cmd.slot, ok: r.ok, reason: r.reason });
+      break;
+    }
+    case "load": {
+      const r = loadSlot(cmd.slot);
+      if (!r.ok) {
+        sim.saveHint = r.reason;
+        emit(sim, { type: "loaded", slot: cmd.slot, ok: false, reason: r.reason });
+        break;
+      }
+      applySave(sim, r.blob);
+      sim.slot = cmd.slot;
+      sim.saveHint = `${cmd.slot + 1}자리를 불러왔다`;
+      emit(sim, { type: "loaded", slot: cmd.slot, ok: true });
+      break;
+    }
     default:
       break;
   }
@@ -1302,6 +1324,14 @@ function tickHazards(sim: Sim): void {
   else sim.buffs = sim.buffs.filter((b) => b.id !== "hazard_chill");
 }
 
+function maybeEnding(sim: Sim): void {
+  if (sim.mode !== "play") return;
+  if (!sim.meta.flags.killed_boss_wraith || !sim.meta.flags.ending_rift) return;
+  sim.mode = "ending";
+  emit(sim, { type: "ending" });
+  emit(sim, { type: "message", text: "적월이 갈라지고, 조선의 밤이 한 숨 고른다.", kind: "info" });
+}
+
 function tickProgress(sim: Sim): void {
   const hub = hubAt(sim.player.x, sim.player.y);
   if (hub) {
@@ -1316,9 +1346,12 @@ function tickProgress(sim: Sim): void {
       emit(sim, { type: "message", text: `${poi.name}의 표식을 받았다.`, kind: "info" });
     }
     if (k === "dojo" && d < 88) sim.meta.flags.trainer_magung = true;
-    if (k === "rift" && d < 160 && !sim.meta.flags.ending_rift) {
-      sim.meta.flags.ending_rift = true;
-      emit(sim, { type: "message", text: "적월의 균열이 발밑에서 숨 쉰다. 행적의 끝이 보인다.", kind: "warn" });
+    if (k === "rift" && d < 160) {
+      if (!sim.meta.flags.ending_rift) {
+        sim.meta.flags.ending_rift = true;
+        emit(sim, { type: "message", text: "적월의 균열이 발밑에서 숨 쉰다. 행적의 끝이 보인다.", kind: "warn" });
+      }
+      maybeEnding(sim);
     }
   }
   for (const n of NPCS) {
@@ -1331,7 +1364,6 @@ function tickProgress(sim: Sim): void {
 }
 
 export function step(sim: Sim, dt: number): void {
-  sim.events.length = 0;
   if (sim.mode !== "play" || sim.paused) return;
   sim.tick += 1;
   sim.time += dt;

@@ -81,6 +81,11 @@ export const ENEMIES: EnemyDef[] = [
   B("bandit_smuggler", "밀수꾼", "bandit", ["riverside", "swamp"], "flank", 40, 9, 3, 112, 15, "loot_bandit", "bandit"),
   B("bandit_cross", "쇠뇌수", "bandit", ["mountain", "bamboo"], "rangedKite", 36, 12, 3, 84, 19, "loot_bandit", "bandit_bow", { attackRange: 210 }),
   B("bandit_chief", "산적두령", "bandit", ["mountain"], "charge", 90, 16, 8, 96, 36, "loot_bandit_rare", "bandit_chief", { grades: ["jung", "sang"], radius: 16 }),
+  B("stray_dog", "떠돌이개", "wildlife", ["hanyang", "village", "road"], "flank", 28, 8, 2, 145, 10, "loot_wild", "wolf", { radius: 10 }),
+  B("forest_spider", "숲거미", "wildlife", ["bamboo", "mountain"], "flank", 26, 11, 1, 120, 12, "loot_wild", "bug", { radius: 9 }),
+  B("frost_wolf", "서리늑대", "beast", ["snow"], "flank", 58, 14, 5, 148, 24, "loot_beast", "wolf"),
+  B("marsh_leech", "늪거머리", "swamp", ["swamp"], "meleeChase", 22, 10, 0, 70, 10, "loot_swamp", "bug", { radius: 8 }),
+  B("mirror_shade", "거울그림자", "undead", ["haunted"], "flank", 64, 16, 4, 118, 30, "loot_undead_rare", "ghost"),
 
   B("tiger", "산호랑이", "beast", ["mountain", "bamboo", "snow"], "charge", 80, 16, 6, 130, 32, "loot_beast", "tiger", { radius: 18, attackRange: 32 }),
   B("white_tiger", "흰호랑이", "beast", ["snow", "mountain"], "charge", 110, 18, 8, 134, 44, "loot_beast_rare", "tiger_white", { radius: 18 }),
@@ -143,7 +148,22 @@ export const ENEMIES: EnemyDef[] = [
   B("boss_wraith", "원혼대승", "boss", ["haunted"], "groundSlam", 720, 28, 16, 88, 280, "loot_boss_wraith", "reaper", { boss: true, radius: 22, attackRange: 46, aggro: 380 }),
 ];
 
-export const ENEMY_BY_ID: Record<string, EnemyDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
+const ENEMY_ALIASES: Record<string, string> = {
+  bandit_thug: "bandit_foot",
+  bandit_slinger: "bandit_bow",
+  elite_bandit_chief: "boss_bandit",
+};
+
+export const ENEMY_BY_ID: Record<string, EnemyDef> = {
+  ...Object.fromEntries(ENEMIES.map((e) => [e.id, e])),
+  ...Object.fromEntries(
+    Object.entries(ENEMY_ALIASES).map(([alias, id]) => {
+      const def = ENEMIES.find((e) => e.id === id);
+      if (!def) throw new Error(`없는 적 별칭 ${alias}→${id}`);
+      return [alias, def];
+    }),
+  ),
+};
 
 export const GRADE_MOD: Record<Grade, { hp: number; atk: number; xp: number; name: string }> = {
   ha: { hp: 1, atk: 1, xp: 1, name: "일반" },
