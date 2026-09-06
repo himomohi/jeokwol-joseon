@@ -74,6 +74,13 @@ for (let i = 0; i < 240; i++) {
 if (!foe.dead || !killed) throw new Error("처치 실패");
 if (!hit) throw new Error("타격이 없다");
 if (!loot) throw new Error("루트가 없다");
+if (!sim.trails.some((t) => t.attackId > 0 && Number.isFinite(t.x) && Number.isFinite(t.y))) {
+  throw new Error("무기 끝 트레일이 없다");
+}
+const ids = new Set(sim.trails.map((t) => t.attackId));
+if (ids.has(0)) throw new Error("공격 id 없는 트레일");
+const far = sim.trails.filter((t) => Math.hypot(t.x - sim.player.x, t.y - sim.player.y) > 80);
+if (far.length > sim.trails.length * 0.8) throw new Error("트레일이 리그 끝이 아니라 임의 오프셋이다");
 
 handleCommand(sim, { type: "pickupNearest" });
 ticks(sim, 8);

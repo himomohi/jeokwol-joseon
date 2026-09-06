@@ -16,6 +16,7 @@ import {
   isPureBlack,
   neighborStroke,
 } from "../art/palette";
+import { reviewGuide } from "./guide-checks";
 
 export interface ReviewReport {
   jobs: number;
@@ -92,6 +93,7 @@ export function reviewContent(): ReviewReport {
   if (arts.size < 40) notes.push(`적 아트 키 ${arts.size} < 40`);
   reviewPalette(notes);
   reviewStartScene(notes);
+  reviewGuide(notes);
   return {
     jobs: jobs.length,
     adv: adv.length,

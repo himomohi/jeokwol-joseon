@@ -1,7 +1,12 @@
 import type { CharacterPose, JointId } from "../core/types";
+import { attackPhase, solveRig, type RigInput, type SolvedRig } from "./rig";
+
+export { attackPhase, solveRig };
+export type { RigInput, SolvedRig };
 
 const J = (x: number, y: number, rot: number, scale?: number) => ({ x, y, rot, scale });
 
+/** Bind-space keyframes kept for debug / sheet. Runtime uses solveRig. */
 export const POSES: Record<string, CharacterPose> = {
   idle: {
     id: "idle",
@@ -90,4 +95,13 @@ export function poseOf(moving: boolean, phase: number, attacking: boolean): Char
 export function joint(p: CharacterPose, id: JointId): { x: number; y: number; rot: number; scale: number } {
   const j = p.joints[id] ?? { x: 0, y: 0, rot: 0 };
   return { x: j.x, y: j.y, rot: j.rot, scale: j.scale ?? 1 };
+}
+
+export function rigOf(moving: boolean, walkPhase: number, attackAnim: number, weaponForm: string): SolvedRig {
+  return solveRig({
+    moving,
+    walkPhase,
+    attackT: attackPhase(attackAnim),
+    weaponForm,
+  });
 }

@@ -7,7 +7,7 @@ import type { Sim } from "../world/sim";
 import { handleCommand, liveStats, nearestNpc, xpNeed } from "../world/sim";
 import { slotInfo } from "../persistence/save";
 import { iconSvg } from "../art/icons";
-import { biomeAt } from "../world/map";
+import { biomeAt, biomeColor } from "../world/map";
 import { reviewContent } from "../review/verify";
 import { PAL, snapEnv } from "../art/palette";
 
@@ -279,7 +279,7 @@ function drawMini(c: HTMLCanvasElement | null, sim: Sim): void {
       const tx = Math.floor(wx / TILE);
       const ty = Math.floor(wy / TILE);
       if (!sim.fog[`${tx}:${ty}`]) continue;
-      ctx.fillStyle = snapEnv(BIOMES[biomeAt(sim.seed, wx, wy)].grass);
+      ctx.fillStyle = snapEnv(biomeColor(sim.seed, wx, wy));
       ctx.fillRect(x, y, 4, 4);
     }
   }
@@ -301,7 +301,7 @@ function drawBigMap(c: HTMLCanvasElement, sim: Sim): void {
       const tx = Math.floor(wx / TILE);
       const ty = Math.floor(wy / TILE);
       if (!sim.fog[`${tx}:${ty}`]) continue;
-      ctx.fillStyle = snapEnv(BIOMES[biomeAt(sim.seed, wx, wy)].grass);
+      ctx.fillStyle = snapEnv(biomeColor(sim.seed, wx, wy));
       ctx.fillRect(x, y, 3, 3);
     }
   }

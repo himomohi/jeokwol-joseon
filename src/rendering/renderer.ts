@@ -4,11 +4,17 @@ import { clamp, lerp } from "../core/math";
 import type { Sim } from "../world/sim";
 import { interpActor } from "../world/sim";
 import { drawEnemy, drawNpc, drawPlayer, drawShadow, visFrom } from "../art/actors";
-import { drawChunkGround, drawProp } from "../art/worldArt";
+import { canopyFade, drawChunkGround, drawProp, drawRoof, isTreeArt } from "../art/worldArt";
 import { groundDropCanvas } from "../art/cache";
 import { ParticlePool } from "./particles";
 import { drawLighting, type Light } from "./lighting";
 import { PostFx } from "./post";
+
+interface Drawable {
+  groundY: number;
+  z: number;
+  draw: () => void;
+}
 
 export class Renderer {
   display: HTMLCanvasElement;
@@ -72,22 +78,31 @@ export class Renderer {
     const chunks = sim.terrain.around(sim.player.x, sim.player.y, sim.time, 1);
     for (const c of chunks) drawChunkGround(ctx, c, sim.seed);
 
-    const drawables: { y: number; z: number; draw: () => void }[] = [];
+    const drawables: Drawable[] = [];
 
     for (const c of chunks) {
       for (const pr of c.props) {
         if (Math.abs(pr.x - this.cam.x) > viewR || Math.abs(pr.y - this.cam.y) > viewR) continue;
-        drawables.push({ y: pr.y, z: 0, draw: () => drawProp(ctx, pr) });
+        const groundY = pr.y;
+        if (isTreeArt(pr.def.art)) {
+          const fade = canopyFade(pr, p.x, p.y);
+          drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "trunk", 1) });
+          drawables.push({ groundY, z: 1.05, draw: () => drawProp(ctx, pr, "canopy", fade) });
+        } else if (pr.def.roof) {
+          drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "body", 1) });
+        } else {
+          drawables.push({ groundY, z: 1, draw: () => drawProp(ctx, pr, "body", 1) });
+        }
       }
     }
 
     for (const d of sim.drops) {
       drawables.push({
-        y: d.y,
-        z: 0,
+        groundY: d.y,
+        z: 1,
         draw: () => {
           const ic = groundDropCanvas(d.itemId === "gold" ? "gold_pouch" : d.itemId);
-          ctx.drawImage(ic, d.x - 12, d.y - 12, 24, 24);
+          ctx.drawImage(ic, d.x - 14, d.y - 10, 28, 28);
         },
       });
     }
@@ -95,7 +110,7 @@ export class Renderer {
     const vis = visFrom(sim.meta, sim.player);
     const moving = Math.hypot(sim.player.vx, sim.player.vy) > 8;
     drawables.push({
-      y: p.y,
+      groundY: p.y,
       z: 1,
       draw: () => {
         ctx.save();
@@ -114,7 +129,7 @@ export class Renderer {
       if (drawnActors++ > 28) break;
       const ip = interpActor(a, alpha);
       drawables.push({
-        y: ip.y,
+        groundY: ip.y,
         z: 1,
         draw: () => {
           ctx.save();
@@ -139,7 +154,7 @@ export class Renderer {
       const x = lerp(pr.px, pr.x, alpha);
       const y = lerp(pr.py, pr.y, alpha);
       drawables.push({
-        y,
+        groundY: y,
         z: 2,
         draw: () => {
           ctx.save();
@@ -156,7 +171,7 @@ export class Renderer {
 
     for (const aoe of sim.aoes) {
       drawables.push({
-        y: aoe.y,
+        groundY: aoe.y,
         z: 0,
         draw: () => {
           ctx.save();
@@ -171,25 +186,46 @@ export class Renderer {
       });
     }
 
-    drawables.sort((a, b) => a.y - b.y || a.z - b.z);
+    drawables.sort((a, b) => a.groundY - b.groundY || a.z - b.z);
     for (const d of drawables) d.draw();
 
-    ctx.save();
-    ctx.strokeStyle = rgba(PAL.bone_light, 0.55);
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    let first = true;
+    const groups = new Map<number, { x: number; y: number; a: number }[]>();
     for (const t of sim.trails) {
-      ctx.globalAlpha = t.a;
-      if (first) ctx.moveTo(t.x, t.y);
-      else ctx.lineTo(t.x, t.y);
-      first = false;
+      let g = groups.get(t.attackId);
+      if (!g) {
+        g = [];
+        groups.set(t.attackId, g);
+      }
+      g.push(t);
     }
-    ctx.stroke();
+    ctx.save();
+    ctx.strokeStyle = rgba(PAL.bone_light, 0.7);
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      ctx.beginPath();
+      for (let i = 0; i < g.length; i++) {
+        const s = g[i]!;
+        ctx.globalAlpha = s.a * 0.72;
+        if (i === 0) ctx.moveTo(s.x, s.y);
+        else ctx.lineTo(s.x, s.y);
+      }
+      ctx.stroke();
+    }
     ctx.restore();
 
     this.particles.draw(ctx);
+
+    for (const c of chunks) {
+      for (const r of c.roofs) {
+        const inside = p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
+        r.alpha = lerp(r.alpha, inside ? 0.16 : 1, 0.14);
+        if (r.alpha < 0.05) continue;
+        drawRoof(ctx, r.x, r.y, r.w, r.h, r.alpha);
+      }
+    }
 
     ctx.restore();
 

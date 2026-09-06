@@ -36,6 +36,10 @@ function dummy(art: string, facing = -Math.PI / 2): Actor {
     aiTx: 0,
     aiTy: 0,
     attackCd: 0,
+    attackId: 0,
+    lastTipX: 0,
+    lastTipY: 0,
+    hasLastTip: false,
   };
 }
 

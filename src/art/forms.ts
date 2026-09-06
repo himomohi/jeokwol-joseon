@@ -288,3 +288,67 @@ export function weaponFormOf(t: WeaponType): string {
   if (t === "talisman") return "talisman";
   return "staff";
 }
+
+const HAT_FORMS = new Set(["gat", "gatTall", "heukrip", "jeonrip", "jeollip", "songnak", "manggeon", "helm", "satgat", "official"]);
+
+export function isHatForm(form: string): boolean {
+  return HAT_FORMS.has(form);
+}
+
+/** Blade tip in weapon-local 3D (x right, y along blade toward tip, z depth). Shared with the rig. */
+export function weaponTipOffset(form: string): { x: number; y: number; z: number } {
+  switch (form) {
+    case "sword":
+    case "hwando":
+      return { x: 1.2, y: 24, z: 0 };
+    case "spear":
+      return { x: 0, y: 28, z: 0 };
+    case "dagger":
+      return { x: 0, y: 16, z: 0 };
+    case "staff":
+      return { x: 0, y: 26, z: 0 };
+    case "bow":
+      return { x: 8, y: 2, z: 0 };
+    case "talisman":
+      return { x: 0, y: 12, z: 0 };
+    case "club":
+    case "bangmangi":
+      return { x: 0, y: 20, z: 0 };
+    default:
+      return { x: 0, y: 18, z: 0 };
+  }
+}
+
+/**
+ * §15 shared silhouette: held / icon / ground drop all go through drawWeaponForm or drawHat.
+ */
+export function drawItemForm(
+  ctx: CanvasRenderingContext2D,
+  form: string,
+  tint: string,
+  material: string,
+  scale = 1,
+  pose: "held" | "icon" | "ground" = "held",
+): void {
+  ctx.save();
+  if (pose === "ground") {
+    ctx.rotate(1.12);
+    ctx.scale(0.82, 0.82);
+  } else if (pose === "icon") {
+    ctx.scale(1.05, 1.05);
+  }
+  if (isHatForm(form)) {
+    drawHat(ctx, form, matOf(material, tint));
+  } else if (form === "armor" || form === "robe") {
+    poly(ctx, [[-10, 12], [-7, -10], [7, -10], [11, 12]], matOf(material, tint), 1.2);
+    ctx.strokeStyle = PAL.bone_light;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.lineTo(1, 10);
+    ctx.stroke();
+  } else {
+    drawWeaponForm(ctx, form, tint, material, scale);
+  }
+  ctx.restore();
+}

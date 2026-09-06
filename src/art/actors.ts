@@ -4,9 +4,10 @@ import type { Actor } from "../world/sim";
 import type { PlayerMeta } from "../world/sim";
 import { PAL } from "./palette";
 import { capsule, ellipse, fillStroke, horn, matOf, poly, type Mat } from "./materials";
-import { joint, poseOf } from "./poses";
-import { drawHat, drawWeaponForm } from "./forms";
+import { rigOf } from "./poses";
+import { drawHat, drawItemForm, drawWeaponForm } from "./forms";
 import { blitPngOverlay, cachedStatic, pngKeyForJob, pngOverlay } from "./cache";
+import { finite } from "./rig";
 
 export interface DrawVis {
   robe: string;
@@ -58,9 +59,9 @@ function weaponDefault(t: string): string {
 }
 
 export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: DrawVis, moving: boolean): void {
-  const pose = poseOf(moving, actor.walkPhase, actor.attackAnim > 0);
+  const rig = rigOf(moving, actor.walkPhase, actor.attackAnim, vis.weaponForm);
   ctx.save();
-  ctx.rotate(actor.facing + Math.PI / 2);
+  ctx.rotate(finite(actor.facing) + Math.PI / 2);
   if (actor.flash > 0) ctx.globalAlpha = 0.55 + Math.sin(actor.flash * 40) * 0.3;
 
   if (vis.horse) {
@@ -68,58 +69,51 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, actor: Actor, vis: Dra
     ctx.drawImage(horse, -28, -4, 56, 40);
   }
 
-  const pngKey = pngKeyForJob(vis.jobId);
-  const sheet = pngKey ? pngOverlay(pngKey) : null;
-  if (sheet) {
-    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, 64);
-    ctx.restore();
-    return;
-  }
+  const silk = matOf("silk", vis.robe);
+  const skin = matOf("skin");
 
-  const hip = joint(pose, "hip");
-  ctx.translate(hip.x, hip.y);
+  drawBaji(ctx, rig.footL.x, rig.footL.y, Math.atan2(rig.footL.y - rig.kneeL.y, rig.footL.x - rig.kneeL.x) - Math.PI / 2, matOf("cotton", PAL.earth_dark));
+  drawBaji(ctx, rig.footR.x, rig.footR.y, Math.atan2(rig.footR.y - rig.kneeR.y, rig.footR.x - rig.kneeR.x) - Math.PI / 2, matOf("cotton", PAL.shadow_navy));
 
-  const legL = joint(pose, "legL");
-  const legR = joint(pose, "legR");
-  drawBaji(ctx, legL.x, legL.y, legL.rot, matOf("cotton", PAL.earth_dark));
-  drawBaji(ctx, legR.x, legR.y, legR.rot, matOf("cotton", PAL.shadow_navy));
-
-  const torso = joint(pose, "torso");
   ctx.save();
-  ctx.translate(torso.x, torso.y);
-  ctx.rotate(torso.rot);
+  ctx.translate(rig.torso.x, rig.torso.y);
+  ctx.rotate(rig.torsoRot);
   const torsoC = cachedStatic(`torso:${vis.robe}:${vis.armorKind}`, 48, 52, (c) => drawTorso(c, vis.robe, vis.armorKind));
   ctx.drawImage(torsoC, -24, -26, 48, 52);
   ctx.restore();
 
-  const armR = joint(pose, "armR");
-  capsule(ctx, armR.x, armR.y - 4, armR.x + Math.sin(armR.rot) * 7, armR.y + 7, 2.4, matOf("silk", vis.robe));
-  ellipse(ctx, armR.x + Math.sin(armR.rot) * 8, armR.y + 8, 2.2, 2.4, matOf("skin"));
+  capsule(ctx, rig.shoulderL.x, rig.shoulderL.y, rig.elbowL.x, rig.elbowL.y, 2.3, silk);
+  capsule(ctx, rig.elbowL.x, rig.elbowL.y, rig.handL.x, rig.handL.y, 2.1, silk);
+  ellipse(ctx, rig.handL.x, rig.handL.y, 2.2, 2.4, skin);
 
-  const wj = joint(pose, "weapon");
   ctx.save();
-  ctx.translate(wj.x, wj.y);
-  ctx.rotate(wj.rot);
+  ctx.translate(rig.weapon.x, rig.weapon.y);
+  ctx.rotate(rig.weaponRot);
   const wep = cachedStatic(`wep:${vis.weaponForm}:${vis.weaponTint}:${vis.weaponMat}`, 40, 56, (c) => {
-    drawWeaponForm(c, vis.weaponForm, vis.weaponTint, vis.weaponMat, 0.95);
+    drawItemForm(c, vis.weaponForm, vis.weaponTint, vis.weaponMat, 0.95, "held");
   });
   ctx.drawImage(wep, -20, -28, 40, 56);
   ctx.restore();
 
-  const armL = joint(pose, "armL");
-  capsule(ctx, armL.x, armL.y - 4, armL.x + Math.sin(armL.rot) * 6, armL.y + 7, 2.4, matOf("silk", vis.robe));
-  ellipse(ctx, armL.x + Math.sin(armL.rot) * 7, armL.y + 8, 2.2, 2.4, matOf("skin"));
+  capsule(ctx, rig.shoulderR.x, rig.shoulderR.y, rig.elbowR.x, rig.elbowR.y, 2.3, silk);
+  capsule(ctx, rig.elbowR.x, rig.elbowR.y, rig.handR.x, rig.handR.y, 2.1, silk);
+  ellipse(ctx, rig.handR.x, rig.handR.y, 2.2, 2.4, skin);
 
-  const head = joint(pose, "head");
-  drawHead(ctx, head.x, head.y);
+  drawHead(ctx, rig.head.x, rig.head.y);
 
-  const hat = joint(pose, "hat");
   ctx.save();
-  ctx.translate(hat.x, hat.y);
-  ctx.rotate(hat.rot);
+  ctx.translate(rig.hat.x, rig.hat.y);
+  ctx.rotate(rig.hatRot);
   const hatC = cachedStatic(`hat:${vis.hat}`, 40, 36, (c) => drawHat(c, vis.hat, matOf("horsehair")));
   ctx.drawImage(hatC, -20, -20, 40, 36);
   ctx.restore();
+
+  const pngKey = pngKeyForJob(vis.jobId);
+  const sheet = pngKey ? pngOverlay(pngKey) : null;
+  if (sheet) {
+    ctx.globalAlpha = 0.22;
+    blitPngOverlay(ctx, sheet, actor.walkPhase, actor.attackAnim > 0, 64);
+  }
 
   ctx.restore();
 }

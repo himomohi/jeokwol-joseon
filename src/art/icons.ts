@@ -1,6 +1,6 @@
 import { ITEMS } from "../content/items";
 import { PAL, neighborStroke, rgba } from "./palette";
-import { drawWeaponForm } from "./forms";
+import { drawItemForm } from "./forms";
 
 const cache = new Map<string, HTMLCanvasElement>();
 
@@ -20,7 +20,7 @@ export function iconCanvas(itemId: string, size = 48): HTMLCanvasElement {
   ctx.fill();
   ctx.translate(size / 2, size / 2);
   ctx.scale(size / 48, size / 48);
-  if (it) drawWeaponForm(ctx, it.visual.form, it.visual.tint, it.visual.material, 1.15);
+  if (it) drawItemForm(ctx, it.visual.form, it.visual.tint, it.visual.material, 1.15, "icon");
   else {
     ctx.fillStyle = PAL.torch_warm;
     ctx.beginPath();
