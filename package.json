@@ -1,0 +1,16 @@
+{
+  "name": "jeokwol-joseon",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 47261",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host --port 47261",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2",
+    "vite": "^7.1.7"
+  }
+}
