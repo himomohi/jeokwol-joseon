@@ -15,7 +15,7 @@ npm run dev
 npm run build      # 타입 검사 후 dist 생성
 npm run preview    # 빌드 미리보기 (동일 포트)
 npm run typecheck  # tsc만
-npm run smoke      # 시뮬: 공격→루트→장착, 전직, 저장, 엔드
+npm run smoke      # 시뮬 B루프: 스폰→공격→처치→루트→장착→저장/불러오기 (<10초)
 ```
 
 런타임 의존성은 없다. Phaser / Pixi / Three / 물리 엔진 / 생성형 이미지 API를 쓰지 않는다. 월드·인물 아트는 코드로 그린 실루엣(관절·재료·형태)을 Canvas에 캐시하고 WebGL 후처리를 얹는다. PNG/SVG는 파비콘 등 예외만.
