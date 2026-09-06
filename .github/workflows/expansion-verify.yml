@@ -1,0 +1,29 @@
+name: Expansion verification
+on:
+  push:
+    branches: ['work/jeokwol-expansion-20260906']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke
+      - name: Package reproducible source and build
+        run: |
+          tar --exclude=.git --exclude=expansion-workspace.tar.gz -czf /tmp/expansion-workspace.tar.gz .
+          mv /tmp/expansion-workspace.tar.gz expansion-workspace.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: expansion-workspace
+          path: expansion-workspace.tar.gz
+          retention-days: 7
