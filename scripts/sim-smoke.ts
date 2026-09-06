@@ -5,6 +5,7 @@ import { hubAt, POI, zoneAt } from "../src/content/world";
 import { biomeAt } from "../src/world/map";
 import { visFrom } from "../src/art/actors";
 import { ENEMY_BY_ID } from "../src/content/enemies";
+import { itemById } from "../src/content/items";
 import { loadSlot } from "../src/persistence/save";
 
 const r = reviewContent();
@@ -73,12 +74,32 @@ const slash = SKILLS.musa_slash;
 if (!slash || slash.kind !== "slash") throw new Error("무사 내려베기가 없다");
 const vis0 = visFrom(sim.meta, sim.player);
 const atk0 = liveStats(sim).atk;
+const def0 = liveStats(sim).def;
+const gear0 = sim.meta.inventory.filter((i) => {
+  const it = itemById(i.itemId);
+  return it && it.kind !== "consumable" && it.kind !== "misc";
+}).length;
 
 const k1 = fight(sim, (a) => a.kind === "enemy");
 console.log("kill", k1.killed, "hit", k1.hit, "loot", k1.loot, "xp", sim.meta.xp, "gold", sim.meta.gold);
 if (!k1.hit) throw new Error("히트가 없다");
 if (!k1.loot) throw new Error("루트 드롭이 없다");
 if (sim.meta.xp <= 0) throw new Error("경험치가 없다");
+
+const gear1 = sim.meta.inventory.filter((i) => {
+  const it = itemById(i.itemId);
+  return it && it.kind !== "consumable" && it.kind !== "misc";
+}).length;
+const visKill = visFrom(sim.meta, sim.player);
+const connected =
+  gear1 > gear0 ||
+  !!sim.meta.equip.helm ||
+  liveStats(sim).def > def0 ||
+  visKill.hat !== vis0.hat ||
+  visKill.armorKind !== vis0.armorKind ||
+  visKill.robe !== vis0.robe;
+if (!connected) throw new Error("처치 루트가 장착으로 이어지지 않았다");
+console.log("B natural loot→equip", "gear", gear0, gear1, "helm", !!sim.meta.equip.helm, "def", def0, liveStats(sim).def);
 
 const defLoot0 = liveStats(sim).def;
 sim.drops.push({ id: "b-loot", x: sim.player.x, y: sim.player.y, itemId: "chest_scale", qty: 1, age: 0 });

@@ -705,6 +705,12 @@ function rollLoot(sim: Sim, def: EnemyDef, x: number, y: number): void {
   const table = LOOT_TABLES[def.loot] ?? LOOT_TABLES.loot_bandit!;
   const dropped: { itemId: string; qty: number }[] = [];
   const luck = playerStats(sim.meta).luck;
+  const gearTable = table.filter((row) => isGearDrop(row.itemId));
+  if (gearTable.length) {
+    const row = sim.loot.weighted(gearTable);
+    dropped.push({ itemId: row.itemId, qty: row.qty });
+    sim.drops.push({ id: nid(sim, "d"), x: x + sim.loot.around(0, 8), y: y + sim.loot.around(0, 8), itemId: row.itemId, qty: row.qty, age: 0 });
+  }
   const rolls = 1 + (sim.loot.chance((luck + (def.boss ? 40 : 8)) / 100) ? 1 : 0);
   for (let i = 0; i < rolls; i++) {
     const row = sim.loot.weighted(table);
@@ -717,6 +723,13 @@ function rollLoot(sim: Sim, def: EnemyDef, x: number, y: number): void {
     dropped.push({ itemId: "gold", qty: Math.round(def.gold * GRADE_MOD[def.boss ? "sang" : "ha"].xp) });
   }
   emit(sim, { type: "lootDropped", items: dropped, x, y });
+}
+
+function isGearDrop(itemId: string): boolean {
+  if (itemId === "gold") return false;
+  const it = itemById(itemId);
+  if (!it) return false;
+  return it.slot === "weapon" || it.slot === "helm" || it.slot === "chest" || it.slot === "legs" || it.slot === "boots" || it.slot === "accessory";
 }
 
 function hitArc(sim: Sim, src: Actor, skill: SkillDef, power: number, atk: number, crit: number): void {

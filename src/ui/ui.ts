@@ -163,6 +163,12 @@ function hudHtml(sim: Sim, extra: { fps: number; fpsSim: number; post: boolean; 
       return `<div class="slot"><kbd>${i + 1}</kbd><span>${s ? s.name.slice(0, 3) : "—"}</span>${cd > 0 ? `<div class="cd">${cd.toFixed(1)}</div>` : ""}</div>`;
     })
     .join("");
+  const nearDrop = sim.drops.some((d) => Math.hypot(sim.player.x - d.x, sim.player.y - d.y) < 88);
+  const hintCore = npc
+    ? `[E] ${npc.name}에게 말을 건넨다`
+    : nearDrop
+      ? "[F] 노획을 줍는다"
+      : "동녘 벼밭으로 나가 싸우고, 한성에서 교관을 찾는다. I 행낭 K 초식 M 지도 Esc 멈춤";
   return `<div class="hud-top">
     <div class="bars">
       <div class="name-row"><b>${escapeHtml(sim.meta.name)}</b> <span>${job.name}</span> <span>${sim.meta.level}급</span> <span>엽전 ${sim.meta.gold}</span></div>
@@ -174,7 +180,7 @@ function hudHtml(sim: Sim, extra: { fps: number; fpsSim: number; post: boolean; 
   </div>
   ${extra.webglLost ? `<div class="narrow-warn">화면 후처리가 끊겼다. 캔버스로 그린다.</div>` : ""}
   <div class="skillbar">${slots}</div>
-  <div class="hint">${npc ? `[E] ${npc.name}에게 말을 건넨다` : "동녘 벼밭으로 나가 싸우고, 한성에서 교관을 찾는다. I 행낭 K 초식 M 지도 Esc 멈춤"} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 20 ? " · 전직 급수" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
+  <div class="hint">${hintCore} · ${BIOMES[biomeAt(sim.seed, sim.player.x, sim.player.y)].name}${sim.meta.level >= 20 ? " · 전직 급수" : ""}${extra.post ? "" : " · 후처리 끔"} · ${extra.fps.toFixed(0)}fps</div>
   <div class="messages">${sim.messages.slice(-5).map((m) => `<div>${escapeHtml(m.text)}</div>`).join("")}</div>`;
 }
 
