@@ -5,7 +5,7 @@ import { STREAM_SALT } from "../core/rng";
 import { biomeAt, type ChunkData, type PropInst } from "../world/map";
 import { randAt } from "../world/noise";
 import { cachedStatic } from "./cache";
-import { ellipse, fillStroke, matEnv, poly, roundRect } from "./materials";
+import { ellipse, matEnv, poly, roundRect } from "./materials";
 import { PAL, rgba, snapEnv } from "./palette";
 
 function artT(x: number, y: number, seed: number, salt: number): number {
@@ -54,24 +54,19 @@ export function drawTile(ctx: CanvasRenderingContext2D, biome: BiomeId, x: numbe
   }
 
   ctx.fillStyle = snapEnv(b.grass2);
-  ctx.globalAlpha = 0.55;
-  ctx.fillRect(x + 4 + t * 18, y + 5 + t2 * 16, 9 + t3 * 14, 6 + t * 10);
-  if (t2 > 0.45) ctx.fillRect(x + 22 + t3 * 12, y + 18 + t * 14, 8 + t * 10, 5 + t2 * 8);
-  ctx.globalAlpha = 1;
-
-  if (t > 0.58) {
+  for (let i = 0; i < 5; i++) {
+    const px = x + 2 + artT(x / TILE, y / TILE, seed, 50 + i) * (TILE - 6);
+    const py = y + 2 + artT(x / TILE, y / TILE, seed, 70 + i) * (TILE - 6);
+    ctx.fillRect(px, py, 3 + (t * 3) | 0, 2);
+  }
+  if (t > 0.55) {
     ctx.fillStyle = snapEnv(b.dirt);
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(x + 6 + t2 * 22, y + 8 + t3 * 20, 7 + t * 8, 4 + t2 * 5);
-    ctx.globalAlpha = 1;
+    ctx.fillRect(x + 8 + t2 * 24, y + 10 + t3 * 18, 4, 3);
+    ctx.fillRect(x + 20 + t * 16, y + 26 + t2 * 10, 5, 2);
   }
 
-  const tufts = 2 + ((t * 3) | 0);
-  for (let i = 0; i < tufts; i++) {
-    const fx = x + 5 + artT(x / TILE, y / TILE, seed, 20 + i) * (TILE - 10);
-    const fy = y + 8 + artT(x / TILE, y / TILE, seed, 40 + i) * (TILE - 12);
-    tuft(ctx, fx, fy, 4 + t3 * 4, b.deco);
-  }
+  if (t3 > 0.55) tuft(ctx, x + 8 + t * 28, y + 14 + t2 * 22, 5, b.deco);
+  if (t > 0.72) tuft(ctx, x + 26 + t2 * 12, y + 30 + t3 * 10, 4, b.deco);
 
   if (biome === "village" || biome === "hanyang") {
     if (t3 > 0.62) {
@@ -140,7 +135,8 @@ export function drawProp(ctx: CanvasRenderingContext2D, p: PropInst): void {
   const art = p.def.art;
   const sz = propSheetSize(art);
   const sheet = cachedStatic(`prop:${art}:${(p.variant * 8) | 0}:${sz}`, sz, sz, (c) => drawPropArt(c, art, p.def.w, p.def.h));
-  ctx.drawImage(sheet, -sz / 2, -sz * 0.62, sz, sz);
+  const foot = art === "pine" || art === "bamboo" || art === "tent" || art === "deadtree";
+  ctx.drawImage(sheet, -sz / 2, foot ? -sz * 0.72 : -sz * 0.55, sz, sz);
   ctx.restore();
 }
 
@@ -168,10 +164,10 @@ function drawPropArt(ctx: CanvasRenderingContext2D, art: string, w: number, h: n
 
 /** Brown trunk + stacked green canopy. Sized to read at play zoom. */
 export function drawPine(ctx: CanvasRenderingContext2D): void {
-  const wood = matEnv("wood", PAL.earth_dark);
-  const bark = matEnv("wood", PAL.earth_mid);
-  poly(ctx, [[-7, 28], [-5, -8], [5.5, -8], [8, 28]], wood, 1.4);
-  poly(ctx, [[-3, 10], [-2, -6], [1.5, -6], [2.2, 12]], bark, 1);
+  const wood = matEnv("wood", PAL.earth_mid);
+  const bark = matEnv("wood", PAL.earth_dark);
+  poly(ctx, [[-8, 30], [-6, -6], [6.5, -6], [9, 30]], wood, 1.5);
+  poly(ctx, [[-3, 12], [-2, -4], [2, -4], [2.6, 14]], bark, 1);
   ctx.strokeStyle = snapEnv(PAL.earth_mid);
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -183,9 +179,9 @@ export function drawPine(ctx: CanvasRenderingContext2D): void {
 
   const needle = matEnv("jade", PAL.moss_cool);
   const needleDeep = matEnv("jade", PAL.moss_cool);
-  ellipse(ctx, -16, -10, 18, 11, needleDeep);
-  ellipse(ctx, 17, -8, 17, 10, needle);
-  ellipse(ctx, 0, -6, 22, 13, needle);
+  ellipse(ctx, -16, -18, 18, 11, needleDeep);
+  ellipse(ctx, 17, -16, 17, 10, needle);
+  ellipse(ctx, 0, -14, 22, 13, needle);
   ellipse(ctx, -12, -26, 16, 11, needle);
   ellipse(ctx, 13, -28, 16, 11, needleDeep);
   ellipse(ctx, 1, -36, 18, 12, needle);
@@ -195,7 +191,7 @@ export function drawPine(ctx: CanvasRenderingContext2D): void {
 }
 
 export function drawBamboo(ctx: CanvasRenderingContext2D): void {
-  const stalks: [number, number, number][] = [[-8, -58, 4.2], [2, -66, 4.6], [12, -52, 3.6]];
+  const stalks: [number, number, number][] = [[-10, -60, 5.2], [2, -70, 5.6], [14, -54, 4.4]];
   for (const [x, top, w] of stalks) {
     ctx.strokeStyle = snapEnv(PAL.moss_cool);
     ctx.lineWidth = w;
@@ -347,85 +343,97 @@ export function drawHanok(ctx: CanvasRenderingContext2D, art: string, w: number,
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
   ctx.fillRect(-bw - 6, -10, bw * 2 + 12, 6);
+  drawHanokRoof(ctx, -bw - 10, -52, bw * 2 + 20, 48);
 }
 
 /** Solid dark-earth giwa. No stroked umbrella ribs, no ghost alpha stripes. */
 export function drawHanokRoof(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-  const giwa = matEnv("wood", PAL.earth_dark);
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
   ctx.beginPath();
-  ctx.moveTo(x, y + h * 0.78);
-  ctx.quadraticCurveTo(x + w * 0.18, y + h * 0.12, x + w * 0.5, y + 2);
-  ctx.quadraticCurveTo(x + w * 0.82, y + h * 0.12, x + w, y + h * 0.78);
-  ctx.lineTo(x + w * 0.94, y + h * 0.92);
-  ctx.lineTo(x + w * 0.06, y + h * 0.92);
+  ctx.moveTo(x, y + h * 0.62);
+  ctx.lineTo(x + w * 0.12, y + h * 0.22);
+  ctx.lineTo(x + w * 0.5, y + 4);
+  ctx.lineTo(x + w * 0.88, y + h * 0.22);
+  ctx.lineTo(x + w, y + h * 0.62);
+  ctx.lineTo(x + w * 0.92, y + h * 0.88);
+  ctx.lineTo(x + w * 0.08, y + h * 0.88);
   ctx.closePath();
-  fillStroke(ctx, giwa, 1.6);
+  ctx.fill();
+  ctx.strokeStyle = snapEnv(PAL.shadow_navy);
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(x + w * 0.08, y + h * 0.34, w * 0.84, h * 0.16);
-  ctx.fillStyle = snapEnv(PAL.shadow_navy);
-  ctx.fillRect(x + w * 0.46, y + 2, w * 0.08, h * 0.42);
-
+  ctx.fillRect(x + w * 0.44, y + 2, w * 0.12, h * 0.38);
   ctx.fillStyle = snapEnv(PAL.earth_mid);
-  ctx.fillRect(x + 2, y + h * 0.86, w - 4, 5);
+  ctx.fillRect(x + 2, y + h * 0.82, w - 4, 8);
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(x + w * 0.5 - 5, y, 10, 7);
+  ctx.fillRect(x + w * 0.5 - 7, y, 14, 8);
 }
 
 export function drawTent(ctx: CanvasRenderingContext2D): void {
-  const canvas = matEnv("cotton", PAL.earth_mid);
-  const shade = matEnv("cotton", PAL.earth_dark);
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  ctx.fillRect(-26, 12, 52, 6);
 
   ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(-28, 18);
-  ctx.lineTo(-22, 8);
-  ctx.moveTo(28, 18);
-  ctx.lineTo(22, 8);
-  ctx.moveTo(-8, 20);
-  ctx.lineTo(-4, 10);
-  ctx.moveTo(8, 20);
-  ctx.lineTo(4, 10);
+  ctx.moveTo(-34, 22);
+  ctx.lineTo(-24, 8);
+  ctx.moveTo(34, 22);
+  ctx.lineTo(24, 8);
+  ctx.moveTo(-12, 24);
+  ctx.lineTo(-8, 12);
+  ctx.moveTo(12, 24);
+  ctx.lineTo(8, 12);
   ctx.stroke();
+  ctx.fillStyle = snapEnv(PAL.earth_dark);
+  for (const [sx, sy] of [[-36, 20], [32, 20], [-14, 22], [10, 22]] as const) ctx.fillRect(sx, sy, 5, 5);
 
   ctx.fillStyle = snapEnv(PAL.earth_dark);
-  ctx.fillRect(-30, 16, 4, 5);
-  ctx.fillRect(26, 16, 4, 5);
-  ctx.fillRect(-10, 18, 4, 5);
-  ctx.fillRect(6, 18, 4, 5);
-
-  poly(ctx, [[-24, 10], [0, -22], [-2, 12]], shade, 1.3);
-  poly(ctx, [[2, 12], [0, -22], [24, 10]], canvas, 1.3);
-
-  ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(-14, 4);
-  ctx.lineTo(-6, -10);
-  ctx.moveTo(14, 4);
-  ctx.lineTo(6, -10);
-  ctx.moveTo(-10, 10);
-  ctx.lineTo(10, 10);
-  ctx.stroke();
-
-  ctx.fillStyle = snapEnv(PAL.shadow_navy);
+  ctx.moveTo(-26, 12);
+  ctx.lineTo(-4, -20);
+  ctx.lineTo(-2, 14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = snapEnv(PAL.earth_mid);
   ctx.beginPath();
-  ctx.moveTo(-7, 12);
-  ctx.lineTo(0, -6);
-  ctx.lineTo(7, 12);
+  ctx.moveTo(2, 14);
+  ctx.lineTo(4, -20);
+  ctx.lineTo(26, 12);
   ctx.closePath();
   ctx.fill();
 
   ctx.strokeStyle = snapEnv(PAL.earth_dark);
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
-  ctx.moveTo(0, -24);
-  ctx.lineTo(0, 12);
+  ctx.moveTo(-16, 6);
+  ctx.lineTo(-8, -8);
+  ctx.moveTo(16, 6);
+  ctx.lineTo(8, -8);
+  ctx.moveTo(-18, 10);
+  ctx.lineTo(18, 10);
   ctx.stroke();
 
+  ctx.fillStyle = snapEnv(PAL.shadow_navy);
+  ctx.fillRect(-8, 2, 16, 12);
   ctx.fillStyle = snapEnv(PAL.earth_mid);
-  ctx.fillRect(-2, -26, 4, 5);
+  ctx.beginPath();
+  ctx.moveTo(-8, 2);
+  ctx.lineTo(0, -8);
+  ctx.lineTo(8, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = snapEnv(PAL.earth_dark);
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(0, -24);
+  ctx.lineTo(0, 14);
+  ctx.stroke();
+  ctx.fillStyle = snapEnv(PAL.bone_light);
+  ctx.fillRect(-2, -27, 4, 6);
 }
 
 function drawStoneWall(ctx: CanvasRenderingContext2D): void {

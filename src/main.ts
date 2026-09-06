@@ -12,13 +12,17 @@ import { bootPrep } from "./app/boot";
 const canvas = document.getElementById("world") as HTMLCanvasElement;
 const uiRoot = document.getElementById("ui-root") as HTMLElement;
 
-const sheetMode = new URLSearchParams(location.search).get("sheet") === "1";
-if (sheetMode) {
-  void import("./art/sheet").then(({ paintJoseonSheet }) => {
-    paintJoseonSheet(canvas);
-    uiRoot.innerHTML = `<div style="position:fixed;left:12px;top:12px;color:#EDE4D4;font:14px serif">적월조선 실루엣</div>`;
+const qs = new URLSearchParams(location.search);
+const sheetMode = qs.get("sheet") === "1";
+const worldQa = qs.get("worldqa") === "1";
+const autoPlay = qs.get("play") === "1";
+if (sheetMode || worldQa) {
+  void import("./art/sheet").then(({ paintJoseonSheet, paintWorldQa }) => {
+    if (worldQa) paintWorldQa(canvas);
+    else paintJoseonSheet(canvas);
+    uiRoot.innerHTML = `<div style="position:fixed;left:12px;top:12px;color:#EDE4D4;font:14px serif;z-index:5">${worldQa ? "월드 QA" : "적월조선 실루엣"}</div>`;
   });
-}
+} else {
 
 const sim = createEmptySim();
 const renderer = new Renderer(canvas);
@@ -132,10 +136,15 @@ function frame(tms: number): void {
       if (sig !== lastUi) {
         lastUi = sig;
         renderUi(uiRoot, sim, ui, { fps: loop.fps, fpsSim: loop.simFps, post: sim.postOn, webglLost: renderer.post.lost });
+      } else {
+        const fpsEl = uiRoot.querySelector("[data-fps]");
+        if (fpsEl) fpsEl.textContent = `${loop.fps.toFixed(0)}fps`;
       }
     },
   );
   requestAnimationFrame(frame);
 }
 
-if (!sheetMode) requestAnimationFrame(frame);
+if (autoPlay) handleCommand(sim, { type: "newGame", name: "나그네", job: "musa", slot: 0, seed: 1 });
+requestAnimationFrame(frame);
+}

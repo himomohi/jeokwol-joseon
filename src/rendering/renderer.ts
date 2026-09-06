@@ -4,7 +4,7 @@ import { clamp, lerp } from "../core/math";
 import type { Sim } from "../world/sim";
 import { interpActor } from "../world/sim";
 import { drawEnemy, drawNpc, drawPlayer, drawShadow, visFrom } from "../art/actors";
-import { drawChunkGround, drawProp, drawRoof } from "../art/worldArt";
+import { drawChunkGround, drawProp } from "../art/worldArt";
 import { groundDropCanvas } from "../art/cache";
 import { ParticlePool } from "./particles";
 import { drawLighting, type Light } from "./lighting";
@@ -190,16 +190,6 @@ export class Renderer {
     ctx.restore();
 
     this.particles.draw(ctx);
-
-    const roofs: { x: number; y: number; w: number; h: number; alpha: number }[] = [];
-    for (const c of chunks) {
-      for (const r of c.roofs) {
-        const inside = p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
-        r.alpha = lerp(r.alpha, inside ? 0 : 1, 0.18);
-        roofs.push(r);
-      }
-    }
-    for (const r of roofs) drawRoof(ctx, r.x, r.y, r.w, r.h, r.alpha);
 
     ctx.restore();
 
