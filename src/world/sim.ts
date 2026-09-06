@@ -16,6 +16,7 @@ import { JOBS, SKILLS, jobById, skillsForJob, type SkillDef } from "../content/j
 import { ENEMIES, ENEMY_BY_ID, GRADE_MOD, type EnemyDef } from "../content/enemies";
 import { ITEMS, SHOP_LIST, STARTER_BOOTS, STARTER_CHEST, STARTER_WEAPON, itemById } from "../content/items";
 import { HUBS, LOOT_TABLES, NPCS, POI, SPAWN_FAMILY_TO_ENEMY, hubAt, restHubs, zoneAt } from "../content/world";
+import { placedNpc } from "./placement";
 import { addStats } from "../content/jobs";
 import { TerrainCache, biomeAt, distToRoad, type ChunkData, type Solid } from "./map";
 import { pushOut } from "./collision";
@@ -307,41 +308,44 @@ function giveStarter(sim: Sim): void {
 }
 
 function npcActors(): Actor[] {
-  return NPCS.map((n) => ({
-    id: n.id,
-    kind: "npc" as const,
-    defId: n.id,
-    name: n.name,
-    x: n.x,
-    y: n.y,
-    px: n.x,
-    py: n.y,
-    vx: 0,
-    vy: 0,
-    facing: 1.2,
-    hp: 999,
-    hpMax: 999,
-    mp: 0,
-    radius: 12,
-    team: 0,
-    grade: "ha" as const,
-    flash: 0,
-    stunUntil: 0,
-    invulnUntil: 0,
-    attackAnim: 0,
-    walkPhase: 0,
-    dead: false,
-    art: n.role === "trainer" ? "npc_trainer" : n.role === "shop" ? "npc_shop" : "npc",
-    aiT: 0,
-    aiTx: n.x,
-    aiTy: n.y,
-    attackCd: 0,
-    npcId: n.id,
-    attackId: 0,
-    lastTipX: 0,
-    lastTipY: 0,
-    hasLastTip: false,
-  }));
+  return NPCS.map((n) => {
+    const at = placedNpc(n);
+    return {
+      id: n.id,
+      kind: "npc" as const,
+      defId: n.id,
+      name: n.name,
+      x: at.x,
+      y: at.y,
+      px: at.x,
+      py: at.y,
+      vx: 0,
+      vy: 0,
+      facing: 1.2,
+      hp: 999,
+      hpMax: 999,
+      mp: 0,
+      radius: 12,
+      team: 0,
+      grade: "ha" as const,
+      flash: 0,
+      stunUntil: 0,
+      invulnUntil: 0,
+      attackAnim: 0,
+      walkPhase: 0,
+      dead: false,
+      art: n.role === "trainer" ? "npc_trainer" : n.role === "shop" ? "npc_shop" : "npc",
+      aiT: 0,
+      aiTx: at.x,
+      aiTy: at.y,
+      attackCd: 0,
+      npcId: n.id,
+      attackId: 0,
+      lastTipX: 0,
+      lastTipY: 0,
+      hasLastTip: false,
+    };
+  });
 }
 
 export function createEmptySim(): Sim {

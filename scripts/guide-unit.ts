@@ -1,9 +1,10 @@
 import { reviewContent } from "../src/review/verify";
 import { ATTACK_DUR, project3, sampleWeaponTip, solveElbow, solveRig } from "../src/art/rig";
 import { weaponTipOffset } from "../src/art/forms";
-import { biomeWeights, groundTint } from "../src/world/map";
+import { biomeWeights, groundTint, propForBiome } from "../src/world/map";
 import { createEmptySim, handleCommand, step } from "../src/world/sim";
 import { POI } from "../src/content/world";
+import { fieldMix, tentSiteAllowed } from "../src/world/placement";
 
 const r = reviewContent();
 if (!r.ok) throw new Error(r.notes.join(", "));
@@ -65,5 +66,15 @@ if (!sim.trails.some((t) => t.attackId === id1) && !sim.trails.some((t) => t.att
 }
 const ids = new Set(sim.trails.map((t) => t.attackId));
 if (ids.size < 1) throw new Error("trail groups empty");
+
+if (propForBiome("road").some((p) => p.id === "tent")) throw new Error("road field mix still has tents");
+if (!fieldMix("hanyang").some((p) => p.art === "pine") || !fieldMix("hanyang").some((p) => p.art === "bamboo")) {
+  throw new Error("suburb mix missing pine+bamboo");
+}
+if (!fieldMix("swamp").some((p) => p.art === "reed") || !fieldMix("swamp").some((p) => p.art === "deadtree")) {
+  throw new Error("swamp mix missing reed+deadtree");
+}
+if (tentSiteAllowed(80, 40)) throw new Error("start plaza allowed a tent");
+if (!tentSiteAllowed(2460, 36)) throw new Error("east-gate tent rejected");
 
 console.log("GUIDE-UNIT OK", { span: span.toFixed(2), attacks: [id1, id2], trailIds: [...ids] });

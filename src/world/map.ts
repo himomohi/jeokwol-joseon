@@ -5,6 +5,19 @@ import type { PropDefinition } from "../core/types";
 import { clamp, dist, smoothstep } from "../core/math";
 import { fbm, randAt } from "./noise";
 import { mixHex, mixWeighted, snapEnv } from "../art/palette";
+import {
+  DENSITY_MAX,
+  FIELD_ATTEMPTS,
+  blockedByDesigned,
+  designedFieldProps,
+  fieldKeepChance,
+  fieldMix,
+  hansungExtras,
+  pickFieldProp,
+  tooClose,
+  windowDensity,
+  type DesignedProp,
+} from "./placement";
 
 const BIOME_IDS: BiomeId[] = ["hanyang", "mountain", "bamboo", "riverside", "swamp", "snow", "haunted", "road", "village"];
 
@@ -198,6 +211,8 @@ function villageLayout(seed: number, hub: HubDef): PropInst[] {
     { def: PROPS.lantern!, x: 80, y: 90 },
     { def: PROPS.lantern!, x: 20, y: -70 },
     { def: PROPS.pine!, x: -80, y: -50 },
+    { def: PROPS.pine!, x: -50, y: 40 },
+    { def: PROPS.pine!, x: 20, y: -40 },
     { def: PROPS.pine!, x: 165, y: 40 },
     { def: PROPS.pine!, x: 180, y: -80 },
     { def: PROPS.pine!, x: -220, y: -160 },
@@ -209,6 +224,7 @@ function villageLayout(seed: number, hub: HubDef): PropInst[] {
     { def: PROPS.pine!, x: 390, y: -50 },
     { def: PROPS.pine!, x: 440, y: 70 },
     { def: PROPS.bamboo!, x: 70, y: 60 },
+    { def: PROPS.bamboo!, x: 10, y: 50 },
     { def: PROPS.bamboo!, x: -130, y: 70 },
     { def: PROPS.bamboo!, x: 170, y: 150 },
     { def: PROPS.bamboo!, x: -155, y: 165 },
@@ -245,27 +261,41 @@ function campLayout(seed: number, hub: HubDef): PropInst[] {
   ]);
 }
 
-function hubLayout(seed: number, hub: HubDef): PropInst[] {
-  if (hub.layout === "hansung") return hansungLayout(seed, hub);
-  if (hub.layout === "camp") return campLayout(seed, hub);
-  return villageLayout(seed, hub);
+function shrineLayout(seed: number, hub: HubDef): PropInst[] {
+  return pushPlaced(seed, hub.id, hub.x, hub.y, [
+    { def: PROPS.shrine!, x: 0, y: -16 },
+    { def: PROPS.lantern!, x: -26, y: 22 },
+    { def: PROPS.lantern!, x: 30, y: 20 },
+    { def: PROPS.pine!, x: -72, y: 8 },
+    { def: PROPS.pine!, x: 68, y: -28 },
+  ]);
 }
 
-function propForBiome(b: BiomeId): PropDefinition[] {
-  if (b === "hanyang" || b === "village") {
-    return [
-      PROPS.pine!,
-      PROPS.pine!,
-      PROPS.pine!,
-      PROPS.bamboo!,
-      PROPS.bamboo!,
-      PROPS.bush!,
-    ];
+function designedInst(seed: number, p: DesignedProp): PropInst {
+  return {
+    id: p.id,
+    def: p.def,
+    x: p.x,
+    y: p.y,
+    variant: randAt(p.x | 0, p.y | 0, seed, 9),
+    roof: p.def.roof,
+  };
+}
+
+function hubLayout(seed: number, hub: HubDef): PropInst[] {
+  let props: PropInst[];
+  if (hub.layout === "hansung") props = hansungLayout(seed, hub);
+  else if (hub.layout === "camp") props = campLayout(seed, hub);
+  else if (hub.layout === "shrine") props = shrineLayout(seed, hub);
+  else props = villageLayout(seed, hub);
+  if (hub.id === "hansung") {
+    for (const extra of hansungExtras()) props.push(designedInst(seed, extra));
   }
-  if (b === "road") {
-    return [PROPS.wall ?? PROPS.rock!, PROPS.campfire!, PROPS.tent!];
-  }
-  return Object.values(PROPS).filter((p) => p.biomes.includes(b) && !p.roof && p.id !== "house" && p.id !== "shop" && p.id !== "gate" && p.id !== "tent");
+  return props;
+}
+
+export function propForBiome(b: BiomeId): PropDefinition[] {
+  return fieldMix(b).filter((p) => p.id !== "tent");
 }
 
 export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
@@ -292,18 +322,26 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
     }
   }
 
-  const extraRocks = zoneAt(ox + CHUNK * 0.5, oy + CHUNK * 0.5)?.id === "pass" ? 10 : 0;
-  for (let i = 0; i < 18 + extraRocks; i++) {
+  for (const designed of designedFieldProps()) {
+    if (worldToChunk(designed.x) !== cx || worldToChunk(designed.y) !== cy) continue;
+    if (props.some((q) => q.def.id === designed.def.id && Math.hypot(q.x - designed.x, q.y - designed.y) < 10)) continue;
+    props.push(designedInst(seed, designed));
+  }
+
+  const spaced = props.map((p) => ({ x: p.x, y: p.y, r: p.def.radius }));
+  const extraRocks = zoneAt(ox + CHUNK * 0.5, oy + CHUNK * 0.5)?.id === "pass" ? 8 : 0;
+  for (let i = 0; i < FIELD_ATTEMPTS + extraRocks; i++) {
     const u = randAt(cx, cy, seed, 100 + i);
     const v = randAt(cx, cy, seed, 200 + i);
     const x = ox + u * CHUNK;
     const y = oy + v * CHUNK;
     const b = biomeAt(seed, x, y);
-    if (hubAt(x, y)) continue;
-    const cands = extraRocks && i >= 18 ? [PROPS.wall ?? PROPS.rock!] : propForBiome(b);
-    if (!cands.length) continue;
-    if (randAt(cx, cy, seed, 300 + i) > (b === "village" ? 0.3 : extraRocks && i >= 18 ? 0.35 : 0.62)) continue;
-    const def = cands[Math.floor(randAt(cx, cy, seed, 400 + i) * cands.length)]!;
+    if (blockedByDesigned(x, y)) continue;
+    const extraRock = extraRocks > 0 && i >= FIELD_ATTEMPTS;
+    if (randAt(cx, cy, seed, 300 + i) > fieldKeepChance(b, extraRock)) continue;
+    if (tooClose(x, y, spaced) || windowDensity(x, y, spaced) >= DENSITY_MAX) continue;
+    const def = extraRock ? (PROPS.wall ?? PROPS.rock!) : pickFieldProp(b, i, randAt(cx, cy, seed, 400 + i));
+    if (!def || def.id === "tent" || def.roof) continue;
     const inst: PropInst = {
       id: `p_${cx}_${cy}_${i}`,
       def,
@@ -313,6 +351,7 @@ export function buildChunk(seed: number, cx: number, cy: number): ChunkData {
       roof: def.roof,
     };
     props.push(inst);
+    spaced.push({ x, y, r: def.radius });
   }
 
   for (const p of props) {
