@@ -210,7 +210,7 @@ function reviewDepthLayers(notes: string[], cache: TerrainCache): void {
   const village = gather(cache, 0, 0, 1).filter((p) => Math.hypot(p.x, p.y) < 280);
   const roofs = cache.around(0, 0, 0, 1).flatMap((c) => c.roofs);
   if (!village.some((p) => p.def.roof)) notes.push("한옥 roof 레이어 없음");
-  if (roofs.length < 3) notes.push("지붕 오버레이 부족");
+  if (roofs.length < 3) notes.push("한옥 지붕 볼륨 부족");
   for (const c of cache.around(0, 0, 0, 1)) {
     for (const p of c.props) {
       if (!p.def.roof || Math.hypot(p.x, p.y) > 280) continue;

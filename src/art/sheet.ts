@@ -2,7 +2,7 @@ import { drawEnemy, drawPlayer, type DrawVis } from "./actors";
 import { PAL } from "./palette";
 import { preloadApprovedPng } from "./cache";
 import type { Actor } from "../world/sim";
-import { drawBamboo, drawHanok, drawHanokRoof, drawPine, drawTent, drawTile } from "./worldArt";
+import { drawBamboo, drawHanok, drawPine, drawTent, drawTile } from "./worldArt";
 import { PROPS } from "../content/world";
 
 function dummy(art: string, facing = -Math.PI / 2): Actor {
@@ -110,7 +110,6 @@ export function paintWorldQa(canvas: HTMLCanvasElement): void {
   ctx.save();
   ctx.translate(720, 110);
   drawHanok(ctx, "house", PROPS.house.w, PROPS.house.h);
-  drawHanokRoof(ctx, -70, -72, 140, 70);
   ctx.restore();
 
   ctx.fillText("pine", 16, 210);
@@ -129,6 +128,5 @@ export function paintWorldQa(canvas: HTMLCanvasElement): void {
   ctx.save();
   ctx.translate(500, 300);
   drawHanok(ctx, "shop", PROPS.shop.w, PROPS.shop.h);
-  drawHanokRoof(ctx, -74, -76, 148, 74);
   ctx.restore();
 }
